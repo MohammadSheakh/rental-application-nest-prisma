@@ -288,7 +288,7 @@ export class AuthService {
     let email: string;
     let name: string;
     let providerId: string;
-    let profileImage?: string;
+    let profileImage: string | undefined;
 
     // Verify OAuth token and extract user info
     if (provider === OAuthProvider.GOOGLE) {

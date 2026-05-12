@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { PrismaModule } from '../../core/database/prisma/prisma.module';
 
 import { UserController } from './user/user.controller';
 import { UserService } from './user/user.service';
-import { User, UserSchema } from './user/user.schema';
 
 import { UserProfileController } from './userProfile/userProfile.controller';
 import { UserProfileService } from './userProfile/userProfile.service';
@@ -21,7 +21,7 @@ import { UserRoleDataController } from './userRoleData/userRoleData.controller';
 import { UserRoleDataService } from './userRoleData/userRoleData.service';
 import { UserRoleData, UserRoleDataSchema } from './userRoleData/userRoleData.schema';
 
-import { RedisModule } from '../../../helpers/redis/redis.module';
+import { RedisModule } from '../../core/database/redis/redis.module';
 
 /**
  * User Module
@@ -34,9 +34,6 @@ import { RedisModule } from '../../../helpers/redis/redis.module';
  */
 @Module({
   imports: [
-    // MongoDB - User collection
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
-    
     // MongoDB - UserProfile collection
     MongooseModule.forFeature([{ name: UserProfile.name, schema: UserProfileSchema }]),
     
@@ -51,6 +48,9 @@ import { RedisModule } from '../../../helpers/redis/redis.module';
 
     // Redis Module (for caching)
     RedisModule,
+
+    // Prisma Module (primary database access for User service)
+    PrismaModule,
   ],
   controllers: [UserController, UserProfileController, UserDevicesController, OAuthAccountController, UserRoleDataController],
   providers: [UserService, UserProfileService, UserDevicesService, OAuthAccountService, UserRoleDataService],

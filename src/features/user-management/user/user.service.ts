@@ -1,105 +1,108 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Redis } from 'ioredis';
+import { Inject, Injectable } from '@nestjs/common';
 
 import { GenericService } from '../../../common/generic/generic.service';
-import { User, UserDocument } from './user.schema';
-import { REDIS_CLIENT } from '../../../helpers/redis/redis.module';
-import { Task, TaskDocument } from '../../task.module/task/task.schema';
-import { ChildrenBusinessUser, ChildrenBusinessUserDocument } from '../../childrenBusinessUser.module/childrenBusinessUser.schema';
+import { REDIS_CLIENT } from '../../../core/database/redis/redis.constants';
+import { PrismaService } from '../../../core/database/prisma/prisma.service';
 
-/**
- * User Service
- * 
- * 📚 EXPRESS → NESTJS TRANSITION
- * 
- * Express Pattern:
- * - class UserService extends GenericService<typeof User, IUser>
- * - constructor() { super(User); }
- * - Manual model access
- * 
- * NestJS Pattern:
- * - @Injectable() decorator
- * - @InjectModel for Mongoose injection
- * - Generic type parameters
- * - Type-safe operations
- * 
- * Key Benefits:
- * ✅ Automatic dependency injection
- * ✅ Type-safe CRUD operations
- * ✅ Easy to extend with custom methods
- * ✅ Reusable generic pattern
- */
+type CacheClient = {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, options?: { EX?: number }): Promise<unknown>;
+  del(key: string): Promise<unknown>;
+};
+
+type UserRecord = {
+  id: string;
+  name: string;
+  email: string;
+  password?: string | null;
+  role: string;
+  profileImageUrl?: string | null;
+  phoneNumber?: string | null;
+  isEmailVerified: boolean;
+  authProvider: string;
+  preferredTime: string;
+  isResetPassword: boolean;
+  failedLoginAttempts?: number;
+  lockUntil?: Date | null;
+  isDeleted: boolean;
+  deletedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+const publicUserSelect = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+  profileImageUrl: true,
+  phoneNumber: true,
+  isEmailVerified: true,
+  authProvider: true,
+  preferredTime: true,
+  isResetPassword: true,
+  isDeleted: true,
+  deletedAt: true,
+  createdAt: true,
+  updatedAt: true,
+};
+
 @Injectable()
-export class UserService extends GenericService<typeof User, UserDocument> {
+export class UserService extends GenericService<any, Partial<UserRecord>> {
   private readonly USER_CACHE_PREFIX = 'user:';
   private readonly USER_CACHE_TTL = 900; // 15 minutes
 
   constructor(
-    @InjectModel(User.name) userModel: Model<UserDocument>,
-    @Inject(REDIS_CLIENT) private redisClient: Redis,
+    private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redisClient: CacheClient | null,
   ) {
-    super(userModel);
+    super((prisma as any).user, publicUserSelect);
   }
 
-  /**
-   * Find user by email
-   * Custom method (not in generic service)
-   */
-  async findByEmail(email: string, includePassword = false): Promise<UserDocument | null> {
-    const query = this.model.findOne({ email: email.toLowerCase(), isDeleted: false });
-
-    if (includePassword) {
-      query.select('+password');
-    }
-
-    return query.lean().exec();
+  async findByEmail(
+    email: string,
+    includePassword = false,
+  ): Promise<Partial<UserRecord> | null> {
+    return await (this.prisma as any).user.findFirst({
+      where: {
+        email: email.toLowerCase(),
+        isDeleted: false,
+      },
+      select: includePassword
+        ? { ...publicUserSelect, password: true }
+        : publicUserSelect,
+    });
   }
 
-  /**
-   * Find user by ID with cache
-   */
-  async findByIdWithCache(id: string): Promise<UserDocument | null> {
+  async findByIdWithCache(id: string): Promise<Partial<UserRecord> | null> {
     const cacheKey = `${this.USER_CACHE_PREFIX}${id}`;
+    const cached = await this.redisClient?.get(cacheKey);
 
-    // Try cache first
-    const cached = await this.redisClient.get(cacheKey);
     if (cached) {
-      return JSON.parse(cached);
+      return JSON.parse(cached) as Partial<UserRecord>;
     }
 
-    // Cache miss - query database
     const user = await this.findById(id);
 
     if (user) {
-      // Cache for 15 minutes
-      await this.redisClient.set(
-        cacheKey,
-        JSON.stringify(user),
-        'EX',
-        this.USER_CACHE_TTL,
-      );
+      await this.redisClient?.set(cacheKey, JSON.stringify(user), {
+        EX: this.USER_CACHE_TTL,
+      });
     }
 
     return user;
   }
 
-  /**
-   * Invalidate user cache
-   */
   async invalidateCache(id: string): Promise<void> {
-    const cacheKey = `${this.USER_CACHE_PREFIX}${id}`;
-    await this.redisClient.del(cacheKey);
+    await this.redisClient?.del(`${this.USER_CACHE_PREFIX}${id}`);
   }
 
-  /**
-   * Update user's preferred time
-   */
-  async updatePreferredTime(userId: string, preferredTime: string): Promise<UserDocument | null> {
+  async updatePreferredTime(
+    userId: string,
+    preferredTime: string,
+  ): Promise<Partial<UserRecord> | null> {
     const result = await this.updateById(userId, { preferredTime });
-    
-    // Invalidate cache
+
     if (result) {
       await this.invalidateCache(userId);
     }
@@ -107,45 +110,14 @@ export class UserService extends GenericService<typeof User, UserDocument> {
     return result;
   }
 
-  /**
-   * Get user statistics
-   * 
-   * Calculates task statistics for a user
-   * Includes tasks where user is owner or assigned
-   */
   async getUserStatistics(userId: string): Promise<{
     totalTasks: number;
     completedTasks: number;
     pendingTasks: number;
   }> {
-    const userIdObj = new Types.ObjectId(userId);
+    const taskDelegate = (this.prisma as any).task;
 
-    // Use aggregation for better performance
-    const stats = await (this as any).model.aggregate([
-      {
-        $match: {
-          $or: [
-            { ownerUserId: userIdObj },
-            { assignedUserIds: userIdObj },
-          ],
-          isDeleted: false,
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalTasks: { $sum: 1 },
-          completedTasks: {
-            $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] },
-          },
-          pendingTasks: {
-            $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] },
-          },
-        },
-      },
-    ]);
-
-    if (stats.length === 0) {
+    if (!taskDelegate) {
       return {
         totalTasks: 0,
         completedTasks: 0,
@@ -153,25 +125,39 @@ export class UserService extends GenericService<typeof User, UserDocument> {
       };
     }
 
+    const baseWhere = {
+      isDeleted: false,
+      OR: [{ ownerUserId: userId }, { assignedUserIds: { has: userId } }],
+    };
+
+    const [totalTasks, completedTasks, pendingTasks] = await Promise.all([
+      taskDelegate.count({ where: baseWhere }),
+      taskDelegate.count({ where: { ...baseWhere, status: 'completed' } }),
+      taskDelegate.count({ where: { ...baseWhere, status: 'pending' } }),
+    ]);
+
     return {
-      totalTasks: stats[0].totalTasks,
-      completedTasks: stats[0].completedTasks,
-      pendingTasks: stats[0].pendingTasks,
+      totalTasks,
+      completedTasks,
+      pendingTasks,
     };
   }
 
-  /**
-   * Check if user is secondary user
-   * 
-   * Secondary users can create tasks for the family
-   * Checked via ChildrenBusinessUser relationship
-   */
   async isSecondaryUser(userId: string): Promise<boolean> {
-    const relationship = await (this as any).model.exists({
-      childUserId: new Types.ObjectId(userId),
-      isSecondaryUser: true,
-      status: 'active',
-      isDeleted: false,
+    const relationshipDelegate = (this.prisma as any).childrenBusinessUser;
+
+    if (!relationshipDelegate) {
+      return false;
+    }
+
+    const relationship = await relationshipDelegate.findFirst({
+      where: {
+        childUserId: userId,
+        isSecondaryUser: true,
+        status: 'active',
+        isDeleted: false,
+      },
+      select: { id: true },
     });
 
     return !!relationship;

@@ -3,20 +3,18 @@ import {
   Get,
   Put,
   Body,
-  Param,
-  Query,
   UseGuards,
   UseInterceptors,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 import { GenericController } from '../../../common/generic/generic.controller';
 import { UserService } from './user.service';
-import { User } from './user.schema';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { AuthGuard } from '../../../common/guards/auth.guard';
-import { UserPayload } from '../../../common/decorators/user.decorator';
+import { User as CurrentUser } from '../../../common/decorators/user.decorator';
+import type { UserPayload } from '../../../common/guards/auth.guard';
 import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
 
 /**
@@ -46,7 +44,7 @@ import { TransformResponseInterceptor } from '../../../common/interceptors/trans
 @UseGuards(AuthGuard)
 @UseInterceptors(TransformResponseInterceptor)
 @ApiBearerAuth()
-export class UserController extends GenericController<typeof User, UserDocument> {
+export class UserController extends GenericController {
   constructor(private userService: UserService) {
     super(userService, 'User');
   }
@@ -61,7 +59,7 @@ export class UserController extends GenericController<typeof User, UserDocument>
     description: 'Get current authenticated user profile with statistics',
   })
   @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
-  async getProfile(@UserPayload() user: UserPayload) {
+  async getProfile(@CurrentUser() user: UserPayload) {
     const userProfile = await this.userService.findByIdWithCache(user.userId);
     
     if (!userProfile) {
@@ -88,7 +86,7 @@ export class UserController extends GenericController<typeof User, UserDocument>
   })
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   async updateProfile(
-    @UserPayload() user: UserPayload,
+    @CurrentUser() user: UserPayload,
     @Body() updateProfileDto: UpdateProfileDto,
   ) {
     const updatedUser = await this.userService.updateById(
@@ -117,7 +115,7 @@ export class UserController extends GenericController<typeof User, UserDocument>
   })
   @ApiResponse({ status: 200, description: 'Preferred time updated successfully' })
   async updatePreferredTime(
-    @UserPayload() user: UserPayload,
+    @CurrentUser() user: UserPayload,
     @Body('preferredTime') preferredTime: string,
   ) {
     return await this.userService.updatePreferredTime(user.userId, preferredTime);
@@ -133,7 +131,7 @@ export class UserController extends GenericController<typeof User, UserDocument>
     description: 'Get current user task statistics',
   })
   @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
-  async getStatistics(@UserPayload() user: UserPayload) {
+  async getStatistics(@CurrentUser() user: UserPayload) {
     return await this.userService.getUserStatistics(user.userId);
   }
 
@@ -147,7 +145,7 @@ export class UserController extends GenericController<typeof User, UserDocument>
     description: 'Get current authenticated user information',
   })
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
-  async getCurrentUser(@UserPayload() user: UserPayload) {
+  async getCurrentUser(@CurrentUser() user: UserPayload) {
     return await this.userService.findByIdWithCache(user.userId);
   }
 }

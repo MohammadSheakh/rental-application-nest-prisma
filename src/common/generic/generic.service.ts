@@ -1,139 +1,86 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
-import { Model, FilterQuery, UpdateQuery, QueryOptions, Types } from 'mongoose';
-import { PaginateOptions, PaginateResult } from '../../types/paginate';
-import { IBaseEntity, IBaseService } from '../base/base.entity';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { PaginateOptions, PaginateResult } from '../../shared/types/paginate';
+
+type PrismaDelegate<TRecord = any> = {
+  findUnique(args: any): Promise<TRecord | null>;
+  findFirst(args: any): Promise<TRecord | null>;
+  findMany(args: any): Promise<TRecord[]>;
+  count(args?: any): Promise<number>;
+  create(args: any): Promise<TRecord>;
+  update(args: any): Promise<TRecord>;
+  delete(args: any): Promise<TRecord>;
+};
 
 /**
- * Generic Service
- * 
- * 📚 EXPRESS → NESTJS TRANSITION
- * 
- * Express Pattern:
- * - class GenericService extends GenericService<Model, Document>
- * - Manual model injection in constructor
- * - Direct Mongoose calls
- * 
- * NestJS Pattern:
- * - @Injectable() decorator
- * - Generic type parameters <TModel, TDocument>
- * - @InjectModel for Mongoose model injection
- * - Type-safe CRUD operations
- * 
- * Key Benefits:
- * ✅ Reusable across all modules
- * ✅ Type-safe (TypeScript generics)
- * ✅ Consistent CRUD operations
- * ✅ Easy to extend
- * ✅ DRY principle
- * 
- * Usage Example:
- * ```typescript
- * @Injectable()
- * export class UserService extends GenericService<typeof User, UserDocument> {
- *   constructor(
- *     @InjectModel('User') userModel: Model<UserDocument>,
- *   ) {
- *     super(userModel);
- *   }
- * 
- *   // Add custom methods here
- *   async findByEmail(email: string) {
- *     return this.model.findOne({ email }).exec();
+ * Generic Prisma CRUD service.
+ *
+ * Pass a Prisma model delegate, for example `prisma.user`, from a feature service:
+ *
+ * ```ts
+ * export class UserService extends GenericService {
+ *   constructor(prisma: PrismaService) {
+ *     super(prisma.user);
  *   }
  * }
  * ```
  */
 @Injectable()
-export class GenericService<
-  TModel extends Model<TDocument>,
-  TDocument extends IBaseEntity,
-> implements IBaseService<TDocument>
-{
-  protected model: TModel;
+export class GenericService<TDelegate = any, TRecord = any> {
+  protected delegate: PrismaDelegate<TRecord>;
+  protected model: any;
+  protected defaultSelect?: Record<string, boolean>;
 
-  constructor(model: TModel) {
-    this.model = model;
+  constructor(delegate: TDelegate, defaultSelect?: Record<string, boolean>) {
+    this.delegate = delegate as PrismaDelegate<TRecord>;
+    // Backward-compatible alias while older modules are migrated away from Mongoose.
+    this.model = delegate;
+    this.defaultSelect = defaultSelect;
   }
 
-  /**
-   * Find by ID
-   */
   async findById(
     id: string,
-    populateOptions?: any,
-    select?: string,
-  ): Promise<TDocument | null> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid ID format');
-    }
+    include?: Record<string, any>,
+    select?: Record<string, boolean>,
+  ): Promise<TRecord | null> {
+    this.validateId(id);
 
-    let query = this.model.findById(id);
-
-    if (select) {
-      query = query.select(select);
-    }
-
-    if (populateOptions) {
-      query = query.populate(populateOptions);
-    }
-
-    return query.lean().exec();
+    return this.delegate.findUnique({
+      where: { id },
+      ...this.buildProjection(include, select),
+    });
   }
 
-  /**
-   * Find all (no pagination)
-   */
   async findAll(
-    filters?: FilterQuery<TDocument>,
-    populateOptions?: any,
-    select?: string,
-  ): Promise<TDocument[]> {
-    let query = this.model.find(filters);
-
-    if (select) {
-      query = query.select(select);
-    }
-
-    if (populateOptions) {
-      query = query.populate(populateOptions);
-    }
-
-    return query.lean().exec();
+    filters: Record<string, any> = {},
+    include?: Record<string, any>,
+    select?: Record<string, boolean>,
+  ): Promise<TRecord[]> {
+    return this.delegate.findMany({
+      where: this.cleanFilters(filters),
+      ...this.buildProjection(include, select),
+    });
   }
 
-  /**
-   * Find all with pagination
-   */
   async findAllWithPagination(
-    filters: FilterQuery<TDocument>,
+    filters: Record<string, any> = {},
     options: PaginateOptions,
-    populateOptions?: any,
-    select?: string,
-  ): Promise<PaginateResult<TDocument>> {
-    let query = this.model.find(filters);
-
-    if (select) {
-      query = query.select(select);
-    }
-
-    if (populateOptions) {
-      query = query.populate(populateOptions);
-    }
-
-    // Apply pagination
-    const page = options.page || 1;
-    const limit = options.limit || 10;
-    const sortBy = options.sortBy || '-createdAt';
-
-    query = query.sort(sortBy).skip((page - 1) * limit).limit(limit);
+    include?: Record<string, any>,
+    select?: Record<string, boolean>,
+  ): Promise<PaginateResult<TRecord>> {
+    const page = Number(options.page) || 1;
+    const limit = Number(options.limit) || 10;
+    const where = this.cleanFilters(filters);
+    const orderBy = this.parseSort(options.sortBy);
 
     const [docs, total] = await Promise.all([
-      query.lean().exec(),
-      this.model.countDocuments(filters).exec(),
+      this.delegate.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy,
+        ...this.buildProjection(include, select),
+      }),
+      this.delegate.count({ where }),
     ]);
 
     return {
@@ -142,92 +89,108 @@ export class GenericService<
       limit,
       total,
       totalPages: Math.ceil(total / limit),
-    } as PaginateResult<TDocument>;
+    };
   }
 
-  /**
-   * Create new document
-   */
-  async create(data: Partial<TDocument>): Promise<TDocument> {
-    return this.model.create(data);
+  async create(data: Record<string, any>): Promise<TRecord> {
+    return this.delegate.create({
+      data,
+      ...this.buildProjection(),
+    });
   }
 
-  /**
-   * Update by ID
-   */
-  async updateById(
-    id: string,
-    data: UpdateQuery<TDocument>,
-    options?: QueryOptions,
-  ): Promise<TDocument | null> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid ID format');
+  async updateById(id: string, data: Record<string, any>): Promise<TRecord | null> {
+    this.validateId(id);
+
+    try {
+      return await this.delegate.update({
+        where: { id },
+        data,
+        ...this.buildProjection(),
+      });
+    } catch (error) {
+      this.throwNotFoundOnMissingRecord(error);
+      throw error;
     }
-
-    return this.model
-      .findByIdAndUpdate(id, data, {
-        new: true,
-        runValidators: true,
-        ...options,
-      })
-      .lean()
-      .exec();
   }
 
-  /**
-   * Delete by ID (hard delete)
-   */
-  async deleteById(id: string): Promise<TDocument | null> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid ID format');
+  async deleteById(id: string): Promise<TRecord> {
+    this.validateId(id);
+
+    try {
+      return await this.delegate.delete({ where: { id } });
+    } catch (error) {
+      this.throwNotFoundOnMissingRecord(error);
+      throw error;
     }
-
-    const result = await this.model.findByIdAndDelete(id).lean().exec();
-
-    if (!result) {
-      throw new NotFoundException('Document not found');
-    }
-
-    return result;
   }
 
-  /**
-   * Soft delete by ID
-   * Sets isDeleted = true instead of removing
-   */
-  async softDeleteById(id: string): Promise<TDocument | null> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid ID format');
-    }
-
-    return this.model
-      .findByIdAndUpdate(
-        id,
-        {
-          isDeleted: true,
-          deletedAt: new Date(),
-        },
-        {
-          new: true,
-          runValidators: true,
-        },
-      )
-      .lean()
-      .exec();
+  async softDeleteById(id: string): Promise<TRecord | null> {
+    return this.updateById(id, {
+      isDeleted: true,
+      deletedAt: new Date(),
+    });
   }
 
-  /**
-   * Count documents
-   */
-  async count(filters?: FilterQuery<TDocument>): Promise<number> {
-    return this.model.countDocuments(filters).exec();
+  async count(filters: Record<string, any> = {}): Promise<number> {
+    return this.delegate.count({ where: this.cleanFilters(filters) });
   }
 
-  /**
-   * Check if document exists
-   */
-  async exists(filters?: FilterQuery<TDocument>): Promise<boolean> {
+  async exists(filters: Record<string, any> = {}): Promise<boolean> {
     const count = await this.count(filters);
     return count > 0;
+  }
+
+  protected buildProjection(
+    include?: Record<string, any>,
+    select?: Record<string, boolean>,
+  ): Record<string, any> {
+    if (include) {
+      return { include };
+    }
+
+    if (select) {
+      return { select };
+    }
+
+    if (this.defaultSelect) {
+      return { select: this.defaultSelect };
+    }
+
+    return {};
+  }
+
+  protected cleanFilters(filters: Record<string, any>): Record<string, any> {
+    const controlKeys = new Set(['page', 'limit', 'sortBy', 'include', 'populate', 'select']);
+    return Object.fromEntries(
+      Object.entries(filters).filter((entry) => {
+        const [key, value] = entry;
+        return !controlKeys.has(key) && value !== undefined && value !== '';
+      }),
+    );
+  }
+
+  protected parseSort(sortBy?: string): Record<string, 'asc' | 'desc'> | undefined {
+    if (!sortBy) {
+      return { createdAt: 'desc' };
+    }
+
+    if (sortBy.startsWith('-')) {
+      return { [sortBy.slice(1)]: 'desc' };
+    }
+
+    return { [sortBy]: 'asc' };
+  }
+
+  protected validateId(id: string): void {
+    if (!id || typeof id !== 'string') {
+      throw new BadRequestException('Invalid ID');
+    }
+  }
+
+  protected throwNotFoundOnMissingRecord(error: any): void {
+    if (error?.code === 'P2025') {
+      throw new NotFoundException('Record not found');
+    }
   }
 }
