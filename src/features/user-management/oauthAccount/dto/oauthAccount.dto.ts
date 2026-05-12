@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsEmail, IsOptional, IsMongoId, IsEnum } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsEmail,
+  IsOptional,
+  IsMongoId,
+  IsEnum,
+} from 'class-validator';
 import { AuthProvider } from '../oauthAccount.schema';
 
 /**

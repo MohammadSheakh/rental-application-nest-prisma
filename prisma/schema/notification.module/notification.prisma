@@ -1,0 +1,64 @@
+enum NotificationType {
+  task
+  group
+  system
+  reminder
+  mention
+  assignment
+  deadline
+  custom
+}
+
+enum NotificationPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  delivered
+  read
+  failed
+}
+
+model Notification {
+  id           String               @id @default(cuid())
+
+  // 🔗 Many notifications can be sent by one user.
+  senderId     String?
+  sender       User?                @relation("NotificationSender", fields: [senderId], references: [id])
+
+  // 🔗 Many notifications can be received by one user.
+  receiverId   String?
+  receiver     User?                @relation("NotificationReceiver", fields: [receiverId], references: [id])
+
+  // Role broadcast target when receiverId is empty.
+  receiverRole String?
+  type         NotificationType
+  priority     NotificationPriority @default(normal)
+  status       NotificationStatus   @default(pending)
+  title        String
+  message      String?
+  // 🔗 Polymorphic target: notification can point to a task, group, message, etc.
+  entityType   String?
+  entityId     String?
+  linkFor      String?
+  linkId       String?
+  data         Json?
+  isRead       Boolean              @default(false)
+  readAt       DateTime?
+  deliveredAt  DateTime?
+  isDeleted    Boolean              @default(false)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@index([receiverId, isRead, isDeleted, createdAt])
+  @@index([receiverId, status, isDeleted])
+  @@index([senderId, isDeleted])
+  @@index([type, isDeleted])
+  @@index([entityType, entityId, isDeleted])
+  @@index([receiverRole, isDeleted])
+}

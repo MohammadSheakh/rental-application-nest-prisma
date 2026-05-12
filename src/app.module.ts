@@ -1,28 +1,18 @@
-import { Module } from '@nestjs/common';
+
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-
-// @Module({
-//   imports: [],
-//   controllers: [AppController],
-//   providers: [AppService],
-// })
-// export class AppModule {}
-
-
 import { Module } from '@nestjs/common';
 import { ConfigModule } from './config/config.module';
-import { DatabaseModule } from './database/database.module';
-import { RedisModule } from './helpers/redis/redis.module';
-import { BullMQModule } from './helpers/bullmq/bullmq.module';
-import { SocketModule } from './modules/socket.gateway/socket.module';
-import { AuthModule } from './modules/auth.module/auth.module';
-import { UserModule } from './modules/user.module/user.module';
-import { TaskModule } from './modules/task.module/task.module';
-import { ChildrenBusinessUserModule } from './modules/childrenBusinessUser.module/childrenBusinessUser.module';
-import { AttachmentModule } from './modules/attachment.module/attachment.module';
-import { NotificationModule } from './modules/notification.module/notification.module';
-import { ChattingModule } from './modules/chatting.module/chatting.module';
+import { DatabaseModule } from './core/database/mongo/mongodb.module';
+import { RedisModule } from './core/database/redis/redis.module';
+import { BullMQModule } from './core/queue/bullmq.module';
+import { SocketModule } from './features/socket.gateway/socket.module';
+import { AuthModule } from './features/authentication/auth.module';
+import { UserModule } from './features/user-management/user.module';
+import { ChattingModule } from './features/chatting.module/chatting.module';
+import { NotificationModule } from './features/notification.module/notification.module';
+import { AttachmentModule } from './features/attachments/attachment.module';
+
 
 /**
  * Application Root Module
@@ -65,8 +55,7 @@ import { ChattingModule } from './modules/chatting.module/chatting.module';
 
     AuthModule,                    // Authentication & Authorization
     UserModule,                    // User management
-    TaskModule,                    // Task management
-    ChildrenBusinessUserModule,    // Parent-child relationships
+    
     AttachmentModule,              // File attachments
     NotificationModule,            // ⭐ Generic notifications
     ChattingModule,                // ⭐ Chat messaging (NEW)
@@ -75,8 +64,6 @@ import { ChattingModule } from './modules/chatting.module/chatting.module';
     // Future Modules (to be added)
     // ──────────────────────────────────────────────────────────────────────
 
-    // AnalyticsModule,            // Analytics & charts
-    // TaskProgressModule,         // Task progress tracking
     // SubscriptionModule,         // Subscriptions
     // PaymentModule,              // Payments
   ],

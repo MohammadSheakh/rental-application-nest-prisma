@@ -1,12 +1,3 @@
-
-// async function bootstrap() {
-//   const app = await NestFactory.create(AppModule);
-//   await app.listen(process.env.PORT ?? 3000);
-// }
-// bootstrap();
-
-
-
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -21,6 +12,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 // Import security packages
 import * as helmet from 'helmet';
 import * as compression from 'compression';
+import { NestFactory } from '@nestjs/core';
 
 /**
  * Main Application Bootstrap

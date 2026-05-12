@@ -1,0 +1,94 @@
+model User {
+  id                  String           @id @default(cuid())
+  name                String
+  email               String           @unique
+  password            String?
+  role                UserRole
+  profileImageUrl     String           @default("/uploads/users/user.png")
+  phoneNumber         String?
+  isEmailVerified     Boolean          @default(false)
+  authProvider        UserAuthProvider @default(local)
+  preferredTime       String           @default("07:00")
+  isResetPassword     Boolean          @default(false)
+  failedLoginAttempts Int              @default(0)
+  lockUntil           DateTime?
+
+  // 🔗 One user can have one wallet.
+  walletId String? @unique
+  wallet   Wallet? @relation(fields: [walletId], references: [id])
+
+  // 🔗 One user can have one primary profile link.
+  profileId String?      @unique
+  profile   UserProfile? @relation("UserProfileLink", fields: [profileId], references: [id])
+
+  // 🔗 One parent/creator user can create many child accounts.
+  accountCreatorId String?
+  accountCreator   User?   @relation("UserAccountCreator", fields: [accountCreatorId], references: [id])
+  childAccounts    User[]  @relation("UserAccountCreator")
+
+  isDeleted Boolean   @default(false)
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // == Back-relations
+  // 🔗 One user can have many withdrawal requests.
+  withdrawalRequests WithdrawalRequest[]
+
+  // 🔗 One user can save many bank info records.
+  bankInfos BankInfo[]
+
+  // 🔗 One user can have many wallet transaction histories.
+  walletTransactionHistories WalletTransactionHistory[]
+
+  // 🔗 One user can own one profile record.
+  ownedProfile UserProfile? @relation("UserProfileOwner")
+
+  // 🔗 One user can have many registered devices.
+  devices UserDevices[]
+
+  // 🔗 One user can link many OAuth provider accounts.
+  oauthAccounts OAuthAccount[]
+
+  // 🔗 One user can have many role-specific data records.
+  roleData UserRoleData[]
+
+  // 🔗 One user can upload many attachments.
+  uploadedAttachments Attachment[] @relation("AttachmentUploader")
+
+  // 🔗 One user can create many conversations.
+  createdConversations Conversation[] @relation("ConversationCreator")
+
+  // 🔗 One user can participate in many conversations.
+  conversationParticipents ConversationParticipents[]
+
+  // 🔗 One user can send many chat messages.
+  sentMessages Message[] @relation("MessageSender")
+
+  // 🔗 One user can have many message read status rows.
+  messageReadStatuses MessageReadStatus[]
+
+  // 🔗 One user can send many notifications.
+  sentNotifications Notification[] @relation("NotificationSender")
+
+  // 🔗 One user can receive many notifications.
+  receivedNotifications Notification[] @relation("NotificationReceiver")
+
+  // 🔗 One user can have many task reminders.
+  taskReminders TaskReminder[] @relation("TaskReminderUser")
+
+  // 🔗 One user can create many task reminders for themselves or others.
+  createdTaskReminders TaskReminder[] @relation("TaskReminderCreator")
+
+  // 🔗 One user can have many payment transactions.
+  paymentTransactions PaymentTransaction[]
+
+  // 🔗 One user can have many Stripe Connect accounts over time.
+  stripeAccounts StripeAccount[]
+
+  @@index([email, isDeleted])
+  @@index([role, isDeleted])
+  @@index([role, isEmailVerified, isDeleted])
+  @@index([accountCreatorId, isDeleted])
+  @@index([createdAt, isDeleted])
+}
