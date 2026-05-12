@@ -149,3 +149,52 @@ If Prisma is not intended, consider renaming the repository/package to avoid con
 - `src/app.module.ts` currently imports nothing and contains only the default starter wiring.
 - `src/main.ts` binds to `process.env.PORT ?? 3000` directly; that’s fine for a starter, but you’ll likely want centralized config/validation as the app grows.
 
+## Addendum (new files detected in `src/`)
+
+Since the first draft of this report, the following non-empty areas were added:
+
+- `src/common/` now contains: base contracts, a generic CRUD controller/service, decorators, guards, exception filters, interceptors, and a custom pipe.
+- `src/core/database/` now contains: Mongo (`src/core/database/mongo/mongodb.module.ts`), Redis (`src/core/database/redis/*`), and a placeholder `prisma/` directory.
+- `src/core/queue/` now contains a BullMQ module/provider/constants and multiple processors.
+- `src/shared/types/paginate.ts` now defines shared pagination types.
+
+### Critical build blockers to fix first
+
+These issues will prevent compilation or running the app as-is:
+
+1. Missing dependencies in `package.json`
+   - Code imports packages that are not installed, including:
+     - `@nestjs/config` (used by `src/config/config.module.ts`, `src/config/config.service.ts`, `src/core/database/redis/redis.provider.ts`)
+     - `@nestjs/jwt` (used by `src/common/guards/auth.guard.ts`)
+     - `@nestjs/swagger` (used by `src/common/generic/generic.controller.ts`)
+     - `mongoose` and `@nestjs/mongoose` (used by Mongo module, generic service/controller, pipes, processors)
+     - `redis` (used by `src/core/database/redis/redis.provider.ts`)
+     - `bullmq` and `@nestjs/bullmq` (used by `src/core/queue/*`)
+2. Broken internal imports (path issues)
+   - `src/common/generic/generic.controller.ts` imports `PaginateOptions` from `../../types/paginate` but the file exists at `src/shared/types/paginate.ts`.
+   - `src/common/generic/generic.service.ts` and `src/common/base/base.entity.ts` have the same incorrect `../../types/paginate` import.
+   - `src/core/database/mongo/mongodb.module.ts` imports `ConfigService` from `../config/config.service`, but the config service is currently at `src/config/config.service.ts`.
+3. Incorrect NestJS import usage
+   - `src/common/generic/generic.controller.ts` imports `ParseObjectIdPipe` from `@nestjs/common`, but it is your own pipe at `src/common/pipes/parse-object-id.pipe.ts`.
+4. Orphaned / copied processor code
+   - `src/core/queue/processors/notification.processor.ts` references paths that don’t exist in this repo (e.g. `../../modules/...`), so it cannot compile until those modules/schemas/gateways are added or the processor is removed/replaced.
+5. Type error in `src/common/filters/mongoose-exception.filter.ts`
+   - The file uses `Request` but does not import it; this will fail TypeScript compilation.
+
+### Quality / consistency notes (non-blocking, but important)
+
+- Several files contain mojibake characters in comments/logs (e.g. `ðŸ“š`, `âœ…`), which usually means an encoding/copy-paste issue. It doesn’t break runtime, but it makes the codebase look corrupted and hard to read.
+- Some “industry standard” comments are very long; consider replacing them with short docstrings + linking to a `docs/` guideline.
+- `src/config/config.module.ts` validation checks treat env values as numbers, but environment variables start as strings; prefer parsing/coercion explicitly (or use a schema validator).
+
+### Recommended next steps (to make it runnable)
+
+1. Decide your data stack (Mongo/Mongoose vs Prisma vs both) and align:
+   - Remove unused folders, or add the missing dependencies and wiring.
+2. Make the app compile:
+   - Fix the internal import paths listed above.
+   - Add required dependencies (or remove the code that needs them).
+3. Wire modules in `src/app.module.ts`:
+   - Import `src/config/config.module.ts`
+   - Import the DB module(s) and queue module(s) you actually use
+4. Add a minimal “health” endpoint in `src/app.controller.ts` that proves DB/Redis connectivity (optional, but helpful).
