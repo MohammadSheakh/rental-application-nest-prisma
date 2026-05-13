@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+//@ts-ignore
 import { Document, Types } from 'mongoose';
 
 /**

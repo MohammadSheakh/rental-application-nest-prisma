@@ -1,9 +1,21 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-
+import {Prisma} from '@prisma/client';
 import { GenericService } from '../../../common/generic/generic.service';
-import { UserDevices, UserDevicesDocument, DeviceType } from './userDevices.schema';
+import { PrismaModule } from 'src/core/database/prisma/prisma.module';
+import { PrismaService } from 'src/core/database/prisma/prisma.service';
+import { DeviceType } from './enums/TDevice.enum';
+// import { UserDevices, UserDevicesDocument, DeviceType } from './userDevices.schema';
+
+const publicUserDeviceSelect = {
+  id: true,
+
+  isDeleted: true,
+  deletedAt: true,
+  createdAt: true,
+  updatedAt: true,
+};
 
 /**
  * UserDevices Service
@@ -12,11 +24,13 @@ import { UserDevices, UserDevicesDocument, DeviceType } from './userDevices.sche
  * Extends GenericService for CRUD operations
  */
 @Injectable()
-export class UserDevicesService extends GenericService<typeof UserDevices, UserDevicesDocument> {
+export class UserDevicesService extends GenericService</*typeof UserDevices*/ any, Partial<Prisma.UserDevices>> {
   constructor(
-    @InjectModel(UserDevices.name) deviceModel: Model<UserDevicesDocument>,
+    private readonly prisma: PrismaService,
+    // @InjectModel(UserDevices.name) deviceModel: Model<UserDevicesDocument>,
   ) {
-    super(deviceModel);
+    // super(deviceModel);
+    super((prisma as any).userDevices, publicUserDeviceSelect);
   }
 
   /**
@@ -27,7 +41,7 @@ export class UserDevicesService extends GenericService<typeof UserDevices, UserD
     fcmToken: string,
     deviceType: DeviceType,
     deviceName?: string,
-  ): Promise<UserDevicesDocument> {
+  ): Promise<Prisma.UserDevices> {
     // Find existing device with same FCM token
     const existingDevice = await this.model.findOne({
       fcmToken,
@@ -56,7 +70,7 @@ export class UserDevicesService extends GenericService<typeof UserDevices, UserD
   /**
    * Get all devices for user
    */
-  async getUserDevices(userId: string): Promise<UserDevicesDocument[]> {
+  async getUserDevices(userId: string): Promise<Prisma.UserDevices[]> {
     return this.model.find({
       userId: new Types.ObjectId(userId),
       isDeleted: false,
@@ -66,7 +80,7 @@ export class UserDevicesService extends GenericService<typeof UserDevices, UserD
   /**
    * Get device by FCM token
    */
-  async getDeviceByToken(fcmToken: string): Promise<UserDevicesDocument | null> {
+  async getDeviceByToken(fcmToken: string): Promise<Prisma.UserDevices | null> {
     return this.model.findOne({
       fcmToken,
       isDeleted: false,
@@ -76,7 +90,7 @@ export class UserDevicesService extends GenericService<typeof UserDevices, UserD
   /**
    * Update last active timestamp
    */
-  async updateLastActive(deviceId: string): Promise<UserDevicesDocument | null> {
+  async updateLastActive(deviceId: string): Promise<Prisma.UserDevices | null> {
     return this.model.findByIdAndUpdate(
       deviceId,
       { lastActive: new Date() },
@@ -87,7 +101,7 @@ export class UserDevicesService extends GenericService<typeof UserDevices, UserD
   /**
    * Remove device (soft delete)
    */
-  async removeDevice(userId: string, deviceId: string): Promise<UserDevicesDocument | null> {
+  async removeDevice(userId: string, deviceId: string): Promise<Prisma.UserDevices | null> {
     const device = await this.model.findOne({
       _id: deviceId,
       userId: new Types.ObjectId(userId),
@@ -127,7 +141,7 @@ export class UserDevicesService extends GenericService<typeof UserDevices, UserD
   /**
    * Get all active devices for user (for push notifications)
    */
-  async getActiveDevices(userId: string): Promise<UserDevicesDocument[]> {
+  async getActiveDevices(userId: string): Promise<Prisma.UserDevices[]> {
     return this.model.find({
       userId: new Types.ObjectId(userId),
       pushEnabled: true,
@@ -159,7 +173,7 @@ export class UserDevicesService extends GenericService<typeof UserDevices, UserD
   /**
    * Enable/disable push notifications for device
    */
-  async updatePushEnabled(deviceId: string, enabled: boolean): Promise<UserDevicesDocument | null> {
+  async updatePushEnabled(deviceId: string, enabled: boolean): Promise<Prisma.UserDevices | null> {
     return this.model.findByIdAndUpdate(
       deviceId,
       { pushEnabled: enabled },

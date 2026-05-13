@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { Redis } from 'ioredis';
-import { REDIS_CLIENT } from '../../../helpers/redis/redis.module';
-import { OtpType } from '../interfaces/otp-payload.interface';
+import { REDIS_CLIENT } from 'src/core/database/redis/redis.constants';
+import { OtpType } from './interfaces/otp-payload.interface';
 
 /**
  * OTP Service

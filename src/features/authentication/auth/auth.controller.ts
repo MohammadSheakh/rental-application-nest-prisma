@@ -18,7 +18,7 @@ import { RegisterDto } from './dto/register.dto';
 import { OAuthLoginDto } from './dto/oauth-login.dto';
 import { CreateOtpDto, VerifyOtpDto } from '../otp/dto/create-otp.dto';
 import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
-import { ThrottleGuard } from '@nestjs/throttler';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 /**
  * Auth Controller
@@ -65,7 +65,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  @UseGuards(ThrottleGuard)
+  @UseGuards(ThrottlerGuard)
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,

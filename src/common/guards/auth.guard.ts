@@ -7,14 +7,15 @@ import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 /**
  * User Payload Interface
  * Extracted from JWT token
+ * MOVE THIS TO types/ directory for better organization
  */
-export interface UserPayload {
-  userId: string;
-  email: string;
-  role: string;
-  iat?: number;
-  exp?: number;
-}
+// export interface UserPayload {
+//   userId: string;
+//   email: string;
+//   role: string;
+//   iat?: number;
+//   exp?: number;
+// }
 
 /**
  * Authentication Guard

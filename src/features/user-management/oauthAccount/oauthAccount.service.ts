@@ -3,7 +3,18 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 import { GenericService } from '../../../common/generic/generic.service';
-import { OAuthAccount, OAuthAccountDocument, AuthProvider } from './oauthAccount.schema';
+import { PrismaService } from 'src/core/database/prisma/prisma.service';
+// import { OAuthAccount, OAuthAccountDocument, AuthProvider } from './oauthAccount.schema';
+
+
+const publicOAuthAccountSelect = {
+  id: true,
+  
+  isDeleted: true,
+  deletedAt: true,
+  createdAt: true,
+  updatedAt: true,
+};
 
 /**
  * OAuthAccount Service
@@ -12,11 +23,13 @@ import { OAuthAccount, OAuthAccountDocument, AuthProvider } from './oauthAccount
  * Extends GenericService for CRUD operations
  */
 @Injectable()
-export class OAuthAccountService extends GenericService<typeof OAuthAccount, OAuthAccountDocument> {
+export class OAuthAccountService extends GenericService<any, Partial<any>> {
   constructor(
-    @InjectModel(OAuthAccount.name) oauthModel: Model<OAuthAccountDocument>,
+    private readonly prisma: PrismaService,
+    // @InjectModel(OAuthAccount.name) oauthModel: Model<OAuthAccountDocument>,
   ) {
-    super(oauthModel);
+    // super(oauthModel);
+    super((prisma as any).oauthAccount, publicOAuthAccountSelect);
   }
 
   /**

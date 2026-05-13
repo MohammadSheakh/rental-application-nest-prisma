@@ -1,23 +1,24 @@
 import {
   Controller,
   Get,
-  Post,
   Put,
+  Body,
+  UseGuards,
+  Post,
   Delete,
   Param,
-  Body,
   Query,
-  UseGuards,
-  ParseIntPipe,
+  ParseIntPipe,   
+  UseInterceptors,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
-import { PaymentTransactionService } from './services/paymentTransaction.service';
-import { CreatePaymentTransactionDto, UpdatePaymentStatusDto, QueryPaymentTransactionDto } from './dto/paymentTransaction.dto';
-import { AuthGuard } from '../../../common/guards/auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { User } from '../../../common/decorators/user.decorator';
 import { Throttle } from '@nestjs/throttler';
+import { CreatePaymentTransactionDto, QueryPaymentTransactionDto, UpdatePaymentStatusDto } from "../dto/paymentTransaction.dto";
+import { PaymentTransactionService } from "../services/paymentTransaction.service";
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
 
 /**
  * PaymentTransaction Controller

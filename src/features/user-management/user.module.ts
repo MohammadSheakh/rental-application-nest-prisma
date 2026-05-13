@@ -7,19 +7,19 @@ import { UserService } from './user/user.service';
 
 import { UserProfileController } from './userProfile/userProfile.controller';
 import { UserProfileService } from './userProfile/userProfile.service';
-import { UserProfile, UserProfileSchema } from './userProfile/userProfile.schema';
+// import { UserProfile, UserProfileSchema } from './userProfile/userProfile.schema';
 
 import { UserDevicesController } from './userDevices/userDevices.controller';
 import { UserDevicesService } from './userDevices/userDevices.service';
-import { UserDevices, UserDevicesSchema } from './userDevices/userDevices.schema';
+// import { UserDevices, UserDevicesSchema } from './userDevices/userDevices.schema';
 
 import { OAuthAccountController } from './oauthAccount/oauthAccount.controller';
 import { OAuthAccountService } from './oauthAccount/oauthAccount.service';
-import { OAuthAccount, OAuthAccountSchema } from './oauthAccount/oauthAccount.schema';
+// import { OAuthAccount, OAuthAccountSchema } from './oauthAccount/oauthAccount.schema';
 
 import { UserRoleDataController } from './userRoleData/userRoleData.controller';
 import { UserRoleDataService } from './userRoleData/userRoleData.service';
-import { UserRoleData, UserRoleDataSchema } from './userRoleData/userRoleData.schema';
+// import { UserRoleData, UserRoleDataSchema } from './userRoleData/userRoleData.schema';
 
 import { RedisModule } from '../../core/database/redis/redis.module';
 
@@ -34,6 +34,7 @@ import { RedisModule } from '../../core/database/redis/redis.module';
  */
 @Module({
   imports: [
+    /*
     // MongoDB - UserProfile collection
     MongooseModule.forFeature([{ name: UserProfile.name, schema: UserProfileSchema }]),
     
@@ -45,6 +46,7 @@ import { RedisModule } from '../../core/database/redis/redis.module';
 
     // MongoDB - UserRoleData collection
     MongooseModule.forFeature([{ name: UserRoleData.name, schema: UserRoleDataSchema }]),
+    */
 
     // Redis Module (for caching)
     RedisModule,

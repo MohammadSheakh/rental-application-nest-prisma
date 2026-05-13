@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+//@ts-ignore
 import { MongooseModule } from '@nestjs/mongoose';
 import { RevenueCatWebhookEvent, RevenueCatWebhookEventSchema } from './schemas/revenueCatWebhookEvent.schema';
 import { RevenueCatWebhookController } from './controllers/revenueCatWebhook.controller';

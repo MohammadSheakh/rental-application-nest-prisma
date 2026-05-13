@@ -9,10 +9,10 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { StripeAccountService } from './services/stripeAccount.service';
-import { AuthGuard } from '../../../common/guards/auth.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { User } from '../../../common/decorators/user.decorator';
-import { Request, Response } from 'express';
+
+
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { User } from 'src/common/decorators/user.decorator';
 
 /**
  * StripeAccount Controller
@@ -68,8 +68,8 @@ export class StripeAccountController {
   })
   async successPage(
     @Param('id') id: string,
-    @Req() req: Request,
-    @Res() res: Response,
+    @Req() req: Req,
+    @Res() res: Res,
   ) {
     const host = req.get('host') || 'localhost:3000';
     const protocol = req.protocol;

@@ -8,7 +8,7 @@ import {
   IsOptional,
   Min,
 } from 'class-validator';
-import { PaymentGateway, PaymentStatus, Currency, TransactionType } from '../constants/payment.constants';
+import { Currency, PaymentGateway, PaymentStatus, TransactionType } from '../../payment/constants/payment.constants';
 
 /**
  * DTO for creating a payment transaction

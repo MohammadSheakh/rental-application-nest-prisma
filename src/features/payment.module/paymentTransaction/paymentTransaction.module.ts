@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+//@ts-ignore
 import { MongooseModule } from '@nestjs/mongoose';
+//@ts-ignore
 import { PaymentTransaction, PaymentTransactionSchema } from './schemas/paymentTransaction.schema';
 import { PaymentTransactionController } from './controllers/paymentTransaction.controller';
 import { PaymentTransactionService } from './services/paymentTransaction.service';

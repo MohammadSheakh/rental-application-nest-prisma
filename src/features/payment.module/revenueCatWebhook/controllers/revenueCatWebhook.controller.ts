@@ -8,8 +8,8 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-import { RevenueCatWebhookService } from './services/revenueCatWebhook.service';
-import { Request } from 'express';
+import { Logger, Inject } from '@nestjs/common';
+import { RevenueCatWebhookService } from '../services/revenueCatWebhook.service';
 
 /**
  * RevenueCat Webhook Controller
@@ -21,6 +21,9 @@ import { Request } from 'express';
 @Controller('webhooks/revenuecat')
 @ApiTags('RevenueCat Webhooks')
 export class RevenueCatWebhookController {
+
+  private readonly logger = new Logger(RevenueCatWebhookController.name);
+
   constructor(private readonly revenueCatWebhookService: RevenueCatWebhookService) {}
 
   /**
@@ -70,7 +73,7 @@ export class RevenueCatWebhookController {
   async handleRevenueCatWebhook(
     @Body() body: any,
     @Headers('X-RevenueCat-Signature') signature: string,
-    @Req() req: Request,
+    @Req() req: Req,
   ) {
     try {
       this.logger.log('🪝 RevenueCat webhook received');

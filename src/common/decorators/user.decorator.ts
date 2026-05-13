@@ -1,6 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { UserPayload } from '../guards/auth.guard';
-
+import { UserPayload } from '../types/user-payload.type';
 /**
  * User Decorator
  * 
@@ -21,6 +20,24 @@ import { UserPayload } from '../guards/auth.guard';
  *   // Only extracts email field
  * }
  */
+
+// Single decorator, two aliases so both @User() and @UserPayload() work
+const userParamDecorator = createParamDecorator(
+  (data: keyof UserPayload | undefined, ctx: ExecutionContext) => {
+    const request = ctx.switchToHttp().getRequest();
+    const user: UserPayload = request.user;
+
+    if (!user) return null;
+    if (data) return user[data];
+    return user;
+  },
+);
+
+export const User = userParamDecorator;
+export const UserPayload = userParamDecorator; // alias — same thing
+
+/* -----------------------
+
 export const User = createParamDecorator(
   (data: keyof UserPayload | undefined, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
@@ -40,3 +57,4 @@ export const User = createParamDecorator(
     return user;
   },
 );
+-----------------------*/

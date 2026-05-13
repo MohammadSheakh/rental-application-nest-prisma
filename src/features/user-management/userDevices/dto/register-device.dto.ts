@@ -1,6 +1,7 @@
 import { IsString, IsNotEmpty, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { DeviceType } from '../userDevices.schema';
+import { DeviceType } from '../enums/TDevice.enum';
+
 
 /**
  * Register Device DTO

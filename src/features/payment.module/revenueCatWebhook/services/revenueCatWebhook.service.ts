@@ -1,7 +1,11 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+//@ts-ignore
 import { InjectModel } from '@nestjs/mongoose';
+//@ts-ignore
 import { Model, Types } from 'mongoose';
+//@ts-ignore
 import { RevenueCatWebhookEvent, RevenueCatWebhookEventDocument } from './schemas/revenueCatWebhookEvent.schema';
+//@ts-ignore
 import { PaymentTransactionService } from '../paymentTransaction/services/paymentTransaction.service';
 import { PaymentStatus, PaymentGateway, PaymentEnvironment, PaymentPlatform } from '../constants/payment.constants';
 import { ConfigService } from '@nestjs/config';

@@ -11,14 +11,16 @@ import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { Redis } from 'ioredis';
 
-import { User, UserDocument } from '../../user.module/user/user.schema';
+
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { OAuthLoginDto, OAuthProvider } from './dto/oauth-login.dto';
 import { OtpService } from '../otp/otp.service';
 import { EmailService } from '../email/email.service';
 import { OAuthVerificationService } from '../oauth/oauth-verification.service';
-import { REDIS_CLIENT } from '../../../helpers/redis/redis.module';
+import { REDIS_CLIENT } from 'src/core/database/redis/redis.constants';
+import { PrismaService } from 'src/core/database/prisma/prisma.service';
+
 
 /**
  * Auth Service
@@ -49,7 +51,8 @@ export class AuthService {
   private readonly TOKEN_BLACKLIST_TTL = 7 * 24 * 60 * 60; // 7 days
 
   constructor(
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    // @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly prisma: PrismaService,   // ← replaces @InjectModel
     private jwtService: JwtService,
     private otpService: OtpService,
     private emailService: EmailService,
@@ -64,7 +67,7 @@ export class AuthService {
     const { email, password } = loginDto;
 
     // Find user with password field
-    const user = await this.userModel
+    const user = await this.prisma.user
       .findOne({ email: email.toLowerCase() })
       .select('+password')
       .exec();
@@ -107,7 +110,7 @@ export class AuthService {
     const { name, email, password, role, phoneNumber } = registerDto;
 
     // Check if user already exists
-    const existingUser = await this.userModel
+    const existingUser = await this.prisma.user
       .findOne({ email: email.toLowerCase() })
       .exec();
 
@@ -119,7 +122,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
-    const user = await this.userModel.create({
+    const user = await this.prisma.user.create({
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
@@ -167,7 +170,7 @@ export class AuthService {
       });
 
       // Find user
-      const user = await this.userModel.findById(payload.userId).exec();
+      const user = await this.prisma.user.findById(payload.userId);
 
       if (!user || user.isDeleted) {
         throw new UnauthorizedException('User not found');
@@ -200,7 +203,7 @@ export class AuthService {
    */
   async forgotPassword(email: string) {
     // Find user
-    const user = await this.userModel
+    const user = await this.prisma.user
       .findOne({ email: email.toLowerCase() })
       .exec();
 
@@ -235,10 +238,10 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     // Update password
-    await this.userModel.updateOne(
-      { email: email.toLowerCase() },
-      { password: hashedPassword },
-    );
+    await this.prisma.user.update({
+      where: { email: email.toLowerCase() },
+      data: { password: hashedPassword },
+    });
 
     return { message: 'Password reset successful' };
   }
@@ -246,7 +249,7 @@ export class AuthService {
   /**
    * Generate JWT tokens
    */
-  private async generateTokens(user: UserDocument) {
+  private async generateTokens(user: any) { // TODO : must type user properly
     const payload = {
       userId: user._id,
       email: user.email,
@@ -307,7 +310,7 @@ export class AuthService {
     }
 
     // Find or create user
-    let user = await this.userModel.findOne({ email: email.toLowerCase() }).exec();
+    let user = await this.prisma.user.findOne({ email: email.toLowerCase() }).exec();
 
     if (user) {
       if (user.isDeleted) {
@@ -318,13 +321,15 @@ export class AuthService {
         throw new BadRequestException('Role is required for new OAuth users');
       }
 
-      user = await this.userModel.create({
-        name: name || email.split('@')[0],
-        email: email.toLowerCase(),
-        role,
-        isEmailVerified: true,
-        authProvider: provider,
-        profileImage: profileImage ? { imageUrl: profileImage } : undefined,
+      user = await this.prisma.user.create({
+        data: {
+          name: name || email.split('@')[0],
+          email: email.toLowerCase(),
+          role,
+          isEmailVerified: true,
+          authProvider: provider,
+          profileImage: profileImage ? { imageUrl: profileImage } : undefined,
+        },
       });
     }
 

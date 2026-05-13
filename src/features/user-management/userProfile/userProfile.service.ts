@@ -5,7 +5,21 @@ import { Redis } from 'ioredis';
 
 import { GenericService } from '../../../common/generic/generic.service';
 import { UserProfile, UserProfileDocument } from './userProfile.schema';
-import { REDIS_CLIENT } from '../../../helpers/redis/redis.module';
+
+import { PrismaService } from 'src/core/database/prisma/prisma.service';
+import { REDIS_CLIENT } from 'src/core/database/redis/redis.constants';
+
+
+const publicUserProfileSelect = {
+  id: true,
+
+
+  isDeleted: true,
+  deletedAt: true,
+  createdAt: true,
+  updatedAt: true,
+};
+
 
 /**
  * UserProfile Service
@@ -19,10 +33,13 @@ export class UserProfileService extends GenericService<typeof UserProfile, UserP
   private readonly PROFILE_CACHE_TTL = 900; // 15 minutes
 
   constructor(
-    @InjectModel(UserProfile.name) profileModel: Model<UserProfileDocument>,
+    private readonly prisma: PrismaService,   // ← replaces @InjectModel
+        
+    // @InjectModel(UserProfile.name) profileModel: Model<UserProfileDocument>,
     @Inject(REDIS_CLIENT) private redisClient: Redis,
   ) {
-    super(profileModel);
+    // super(profileModel);
+    super((prisma as any).userProfile, publicUserProfileSelect);
   }
 
   /**
