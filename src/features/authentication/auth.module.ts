@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { RedisModule } from 'src/core/database/redis/redis.module';
+import { PrismaModule } from 'src/core/database/prisma/prisma.module';
 // import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthController } from './auth/auth.controller';
@@ -58,6 +59,7 @@ import { OAuthVerificationService } from './oauth/oauth-verification.service';
 
     // Redis Module (for OTP and token blacklist)
     RedisModule,
+    PrismaModule,
 
     // Rate Limiting
     ThrottlerModule.forRoot([

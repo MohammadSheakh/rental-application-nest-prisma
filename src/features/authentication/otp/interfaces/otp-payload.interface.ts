@@ -8,10 +8,9 @@ export interface IOtpPayload {
   attempts: number;
 }
 
-/**
- * OTP Type Enum
- */
-export enum OtpType {
-  VERIFY = 'verify',
-  RESET = 'reset',
-}
+export const OtpType = {
+  VERIFY: 'verify',
+  RESET: 'reset',
+} as const;
+
+export type OtpType = (typeof OtpType)[keyof typeof OtpType];

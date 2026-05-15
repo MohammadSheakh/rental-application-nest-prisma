@@ -4,10 +4,9 @@ import {
   IsString,
   IsEmail,
   IsOptional,
-  IsMongoId,
   IsEnum,
 } from 'class-validator';
-import { AuthProvider } from '../oauthAccount.schema';
+import { OAuthProvider } from '@prisma/client';
 
 /**
  * DTO for creating OAuth account
@@ -15,17 +14,17 @@ import { AuthProvider } from '../oauthAccount.schema';
 export class CreateOAuthAccountDto {
   @ApiProperty({ description: 'User ID', example: '507f1f77bcf86cd799439011' })
   @IsNotEmpty({ message: 'User ID is required' })
-  @IsMongoId({ message: 'Invalid user ID format' })
+  @IsString({ message: 'User ID must be a string' })
   userId: string;
 
   @ApiProperty({
     description: 'OAuth provider',
-    enum: AuthProvider,
-    example: AuthProvider.GOOGLE,
+    enum: OAuthProvider,
+    example: OAuthProvider.google,
   })
   @IsNotEmpty({ message: 'Provider is required' })
-  @IsEnum(AuthProvider, { message: 'Invalid provider' })
-  authProvider: AuthProvider;
+  @IsEnum(OAuthProvider, { message: 'Invalid provider' })
+  authProvider: OAuthProvider;
 
   @ApiProperty({ description: 'Provider user ID', example: 'google_123456' })
   @IsNotEmpty({ message: 'Provider user ID is required' })

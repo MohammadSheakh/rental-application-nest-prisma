@@ -8,9 +8,10 @@ import {
   UseInterceptors,
   Res,
   Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { Response } from 'express';
+import type { Request, Response } from 'express';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';

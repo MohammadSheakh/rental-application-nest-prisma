@@ -1,32 +1,32 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsMongoId, IsNotEmpty, IsOptional } from 'class-validator';
-import { TAdminStatus, TProviderApprovalStatus } from '../userRoleData.schema';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { ProviderApprovalStatus, RoleDataAdminStatus } from '@prisma/client';
 
 export class CreateUserRoleDataDto {
   @ApiProperty({ description: 'User ID' })
   @IsNotEmpty()
-  @IsMongoId()
+  @IsString()
   userId: string;
 
-  @ApiPropertyOptional({ enum: TAdminStatus })
+  @ApiPropertyOptional({ enum: RoleDataAdminStatus })
   @IsOptional()
-  @IsEnum(TAdminStatus)
-  adminStatus?: TAdminStatus;
+  @IsEnum(RoleDataAdminStatus)
+  adminStatus?: RoleDataAdminStatus;
 
-  @ApiPropertyOptional({ enum: TProviderApprovalStatus })
+  @ApiPropertyOptional({ enum: ProviderApprovalStatus })
   @IsOptional()
-  @IsEnum(TProviderApprovalStatus)
-  providerApprovalStatus?: TProviderApprovalStatus;
+  @IsEnum(ProviderApprovalStatus)
+  providerApprovalStatus?: ProviderApprovalStatus;
 }
 
 export class UpdateUserRoleDataDto {
-  @ApiPropertyOptional({ enum: TAdminStatus })
+  @ApiPropertyOptional({ enum: RoleDataAdminStatus })
   @IsOptional()
-  @IsEnum(TAdminStatus)
-  adminStatus?: TAdminStatus;
+  @IsEnum(RoleDataAdminStatus)
+  adminStatus?: RoleDataAdminStatus;
 
-  @ApiPropertyOptional({ enum: TProviderApprovalStatus })
+  @ApiPropertyOptional({ enum: ProviderApprovalStatus })
   @IsOptional()
-  @IsEnum(TProviderApprovalStatus)
-  providerApprovalStatus?: TProviderApprovalStatus;
+  @IsEnum(ProviderApprovalStatus)
+  providerApprovalStatus?: ProviderApprovalStatus;
 }

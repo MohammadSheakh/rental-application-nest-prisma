@@ -1,21 +1,16 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import {Prisma} from '@prisma/client';
+import { Prisma, UserDevices } from '@prisma/client';
 import { GenericService } from '../../../common/generic/generic.service';
-import { PrismaModule } from 'src/core/database/prisma/prisma.module';
 import { PrismaService } from 'src/core/database/prisma/prisma.service';
 import { DeviceType } from './enums/TDevice.enum';
-// import { UserDevices, UserDevicesDocument, DeviceType } from './userDevices.schema';
 
 const publicUserDeviceSelect = {
   id: true,
 
   isDeleted: true,
-  deletedAt: true,
   createdAt: true,
   updatedAt: true,
-};
+} satisfies Prisma.UserDevicesSelect;
 
 /**
  * UserDevices Service
@@ -24,7 +19,7 @@ const publicUserDeviceSelect = {
  * Extends GenericService for CRUD operations
  */
 @Injectable()
-export class UserDevicesService extends GenericService</*typeof UserDevices*/ any, Partial<Prisma.UserDevices>> {
+export class UserDevicesService extends GenericService<any, Partial<UserDevices>> {
   constructor(
     private readonly prisma: PrismaService,
     // @InjectModel(UserDevices.name) deviceModel: Model<UserDevicesDocument>,
@@ -41,112 +36,101 @@ export class UserDevicesService extends GenericService</*typeof UserDevices*/ an
     fcmToken: string,
     deviceType: DeviceType,
     deviceName?: string,
-  ): Promise<Prisma.UserDevices> {
-    // Find existing device with same FCM token
-    const existingDevice = await this.model.findOne({
-      fcmToken,
-      userId: new Types.ObjectId(userId),
-      isDeleted: false,
-    }).exec();
+  ): Promise<UserDevices> {
+    const existingDevice = await this.prisma.userDevices.findFirst({
+      where: { fcmToken, userId, isDeleted: false },
+    });
 
     if (existingDevice) {
-      // Update existing device
-      existingDevice.lastActive = new Date();
-      existingDevice.deviceType = deviceType;
-      existingDevice.deviceName = deviceName || existingDevice.deviceName;
-      return existingDevice.save();
+      return this.prisma.userDevices.update({
+        where: { id: existingDevice.id },
+        data: {
+          lastActive: new Date(),
+          deviceType,
+          deviceName: deviceName || existingDevice.deviceName,
+        },
+      });
     }
 
-    // Create new device
-    return this.model.create({
-      userId: new Types.ObjectId(userId),
-      fcmToken,
-      deviceType,
-      deviceName,
-      lastActive: new Date(),
+    return this.prisma.userDevices.create({
+      data: {
+        userId,
+        fcmToken,
+        deviceType,
+        deviceName,
+        lastActive: new Date(),
+      },
     });
   }
 
   /**
    * Get all devices for user
    */
-  async getUserDevices(userId: string): Promise<Prisma.UserDevices[]> {
-    return this.model.find({
-      userId: new Types.ObjectId(userId),
-      isDeleted: false,
-    }).sort({ lastActive: -1 }).lean().exec();
+  async getUserDevices(userId: string): Promise<UserDevices[]> {
+    return this.prisma.userDevices.findMany({
+      where: { userId, isDeleted: false },
+      orderBy: { lastActive: 'desc' },
+    });
   }
 
   /**
    * Get device by FCM token
    */
-  async getDeviceByToken(fcmToken: string): Promise<Prisma.UserDevices | null> {
-    return this.model.findOne({
-      fcmToken,
-      isDeleted: false,
-    }).lean().exec();
+  async getDeviceByToken(fcmToken: string): Promise<UserDevices | null> {
+    return this.prisma.userDevices.findFirst({
+      where: { fcmToken, isDeleted: false },
+    });
   }
 
   /**
    * Update last active timestamp
    */
-  async updateLastActive(deviceId: string): Promise<Prisma.UserDevices | null> {
-    return this.model.findByIdAndUpdate(
-      deviceId,
-      { lastActive: new Date() },
-      { new: true },
-    ).lean().exec();
+  async updateLastActive(deviceId: string): Promise<UserDevices | null> {
+    return this.prisma.userDevices.update({
+      where: { id: deviceId },
+      data: { lastActive: new Date() },
+    });
   }
 
   /**
    * Remove device (soft delete)
    */
-  async removeDevice(userId: string, deviceId: string): Promise<Prisma.UserDevices | null> {
-    const device = await this.model.findOne({
-      _id: deviceId,
-      userId: new Types.ObjectId(userId),
-      isDeleted: false,
-    }).exec();
+  async removeDevice(userId: string, deviceId: string): Promise<UserDevices | null> {
+    const device = await this.prisma.userDevices.findFirst({
+      where: { id: deviceId, userId, isDeleted: false },
+    });
 
     if (!device) {
       throw new NotFoundException('Device not found');
     }
 
-    return this.model.findByIdAndUpdate(
-      deviceId,
-      {
+    return this.prisma.userDevices.update({
+      where: { id: deviceId },
+      data: {
         isDeleted: true,
-        deletedAt: new Date(),
       },
-      { new: true },
-    ).lean().exec();
+    });
   }
 
   /**
    * Remove device by FCM token
    */
   async removeDeviceByToken(userId: string, fcmToken: string): Promise<void> {
-    await this.model.updateOne(
-      {
-        fcmToken,
-        userId: new Types.ObjectId(userId),
-      },
-      {
+    await this.prisma.userDevices.updateMany({
+      where: { fcmToken, userId },
+      data: {
         isDeleted: true,
-        deletedAt: new Date(),
       },
-    ).exec();
+    });
   }
 
   /**
    * Get all active devices for user (for push notifications)
    */
-  async getActiveDevices(userId: string): Promise<Prisma.UserDevices[]> {
-    return this.model.find({
-      userId: new Types.ObjectId(userId),
-      pushEnabled: true,
-      isDeleted: false,
-    }).lean().exec();
+  async getActiveDevices(userId: string): Promise<UserDevices[]> {
+    return this.prisma.userDevices.findMany({
+      where: { userId, pushEnabled: true, isDeleted: false },
+    });
   }
 
   /**
@@ -156,28 +140,26 @@ export class UserDevicesService extends GenericService</*typeof UserDevices*/ an
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-    const result = await this.model.updateMany(
-      {
-        lastActive: { $lt: oneYearAgo },
+    const result = await this.prisma.userDevices.updateMany({
+      where: {
+        lastActive: { lt: oneYearAgo },
         isDeleted: false,
       },
-      {
+      data: {
         isDeleted: true,
-        deletedAt: new Date(),
       },
-    ).exec();
+    });
 
-    return result.modifiedCount;
+    return result.count;
   }
 
   /**
    * Enable/disable push notifications for device
    */
-  async updatePushEnabled(deviceId: string, enabled: boolean): Promise<Prisma.UserDevices | null> {
-    return this.model.findByIdAndUpdate(
-      deviceId,
-      { pushEnabled: enabled },
-      { new: true },
-    ).lean().exec();
+  async updatePushEnabled(deviceId: string, enabled: boolean): Promise<UserDevices | null> {
+    return this.prisma.userDevices.update({
+      where: { id: deviceId },
+      data: { pushEnabled: enabled },
+    });
   }
 }

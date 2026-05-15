@@ -18,7 +18,6 @@ import { AuthGuard } from '../../../common/guards/auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
-import { PaginationQueryDto } from '../../../common/generic/dto/pagination-query.dto';
 
 @ApiTags('User Role Data')
 @Controller('user-role-data')
@@ -30,7 +29,7 @@ export class UserRoleDataController {
 
   @Get('paginate')
   @ApiOperation({ summary: 'Get all user role data with pagination' })
-  async getAllWithPagination(@Query() query: PaginationQueryDto) {
+  async getAllWithPagination(@Query() query: any) {
     return this.userRoleDataService.paginate(query);
   }
 

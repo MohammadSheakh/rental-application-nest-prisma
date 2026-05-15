@@ -6,8 +6,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Prisma, UserAuthProvider } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { Redis } from 'ioredis';
 
@@ -20,6 +19,19 @@ import { EmailService } from '../email/email.service';
 import { OAuthVerificationService } from '../oauth/oauth-verification.service';
 import { REDIS_CLIENT } from 'src/core/database/redis/redis.constants';
 import { PrismaService } from 'src/core/database/prisma/prisma.service';
+import { OtpType } from '../otp/interfaces/otp-payload.interface';
+
+type AuthUser = Prisma.UserGetPayload<{
+  select: {
+    id: true;
+    name: true;
+    email: true;
+    password: true;
+    role: true;
+    profileImageUrl: true;
+    isDeleted: true;
+  };
+}>;
 
 
 /**
@@ -67,10 +79,18 @@ export class AuthService {
     const { email, password } = loginDto;
 
     // Find user with password field
-    const user = await this.prisma.user
-      .findOne({ email: email.toLowerCase() })
-      .select('+password')
-      .exec();
+    const user = await this.prisma.user.findFirst({
+      where: { email: email.toLowerCase(), isDeleted: false },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        password: true,
+        role: true,
+        profileImageUrl: true,
+        isDeleted: true,
+      },
+    });
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -82,6 +102,10 @@ export class AuthService {
     }
 
     // Verify password
+    if (!user.password) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     const isValid = await bcrypt.compare(password, user.password);
 
     if (!isValid) {
@@ -93,11 +117,11 @@ export class AuthService {
 
     return {
       user: {
-        _id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
-        profileImage: user.profileImage,
+        profileImageUrl: user.profileImageUrl,
       },
       ...tokens,
     };
@@ -110,9 +134,10 @@ export class AuthService {
     const { name, email, password, role, phoneNumber } = registerDto;
 
     // Check if user already exists
-    const existingUser = await this.prisma.user
-      .findOne({ email: email.toLowerCase() })
-      .exec();
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      select: { id: true },
+    });
 
     if (existingUser) {
       throw new BadRequestException('Email already registered');
@@ -123,23 +148,25 @@ export class AuthService {
 
     // Create user
     const user = await this.prisma.user.create({
-      name,
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      role,
-      phoneNumber,
-      isEmailVerified: false,
+      data: {
+        name,
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        role,
+        phoneNumber,
+        isEmailVerified: false,
+      },
     });
 
     // Create OTP for email verification
-    const otp = await this.otpService.createOtp(email, 'verify');
+    const otp = await this.otpService.createOtp(email, OtpType.VERIFY);
 
     // Send email with OTP
-    await this.emailService.sendOtpEmail(email, otp, 'verify');
+    await this.emailService.sendOtpEmail(email, otp, OtpType.VERIFY);
 
     return {
       user: {
-        _id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -170,7 +197,9 @@ export class AuthService {
       });
 
       // Find user
-      const user = await this.prisma.user.findById(payload.userId);
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.userId },
+      });
 
       if (!user || user.isDeleted) {
         throw new UnauthorizedException('User not found');
@@ -203,19 +232,20 @@ export class AuthService {
    */
   async forgotPassword(email: string) {
     // Find user
-    const user = await this.prisma.user
-      .findOne({ email: email.toLowerCase() })
-      .exec();
+    const user = await this.prisma.user.findFirst({
+      where: { email: email.toLowerCase(), isDeleted: false },
+      select: { id: true },
+    });
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
     // Create OTP
-    const otp = await this.otpService.createOtp(email, 'reset');
+    const otp = await this.otpService.createOtp(email, OtpType.RESET);
 
     // Send email with OTP
-    await this.emailService.sendOtpEmail(email, otp, 'reset');
+    await this.emailService.sendOtpEmail(email, otp, OtpType.RESET);
 
     return { message: 'Password reset OTP sent to your email' };
   }
@@ -223,7 +253,7 @@ export class AuthService {
   /**
    * Verify OTP
    */
-  async verifyOtp(email: string, otp: string, type: 'verify' | 'reset') {
+  async verifyOtp(email: string, otp: string, type: OtpType) {
     return await this.otpService.verifyOtp(email, otp, type);
   }
 
@@ -232,7 +262,7 @@ export class AuthService {
    */
   async resetPassword(email: string, otp: string, newPassword: string) {
     // Verify OTP
-    await this.otpService.verifyOtp(email, otp, 'reset');
+    await this.otpService.verifyOtp(email, otp, OtpType.RESET);
 
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
@@ -249,9 +279,9 @@ export class AuthService {
   /**
    * Generate JWT tokens
    */
-  private async generateTokens(user: any) { // TODO : must type user properly
+  private async generateTokens(user: Pick<AuthUser, 'id' | 'email' | 'role'>) {
     const payload = {
-      userId: user._id,
+      userId: user.id,
       email: user.email,
       role: user.role,
     };
@@ -286,11 +316,10 @@ export class AuthService {
    * OAuth login (Google/Apple)
    */
   async oauthLogin(oauthLoginDto: OAuthLoginDto) {
-    const { provider, idToken, role, fcmToken } = oauthLoginDto;
+    const { provider, idToken, role } = oauthLoginDto;
 
     let email: string;
     let name: string;
-    let providerId: string;
     let profileImage: string | undefined;
 
     // Verify OAuth token and extract user info
@@ -298,19 +327,19 @@ export class AuthService {
       const payload = await this.verifyGoogleIdToken(idToken);
       email = payload.email;
       name = payload.name;
-      providerId = payload.sub;
       profileImage = payload.picture;
     } else if (provider === OAuthProvider.APPLE) {
       const payload = await this.verifyAppleIdToken(idToken);
       email = payload.email;
       name = payload.name;
-      providerId = payload.sub;
     } else {
       throw new BadRequestException('Invalid OAuth provider');
     }
 
     // Find or create user
-    let user = await this.prisma.user.findOne({ email: email.toLowerCase() }).exec();
+    let user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
 
     if (user) {
       if (user.isDeleted) {
@@ -325,10 +354,10 @@ export class AuthService {
         data: {
           name: name || email.split('@')[0],
           email: email.toLowerCase(),
-          role,
+          role: role as Prisma.UserCreateInput['role'],
           isEmailVerified: true,
-          authProvider: provider,
-          profileImage: profileImage ? { imageUrl: profileImage } : undefined,
+          authProvider: provider as UserAuthProvider,
+          profileImageUrl: profileImage,
         },
       });
     }
@@ -337,11 +366,11 @@ export class AuthService {
 
     return {
       user: {
-        _id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
-        profileImage: user.profileImage,
+        profileImageUrl: user.profileImageUrl,
       },
       ...tokens,
     };

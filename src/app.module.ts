@@ -5,13 +5,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from './config/config.module';
 // import { DatabaseModule } from './core/database/mongo/mongodb.module';
 import { RedisModule } from './core/database/redis/redis.module';
-import { BullMQModule } from './core/queue/bullmq.module';
-import { SocketModule } from './features/socket.gateway/socket.module';
 import { AuthModule } from './features/authentication/auth.module';
 import { UserModule } from './features/user-management/user.module';
-import { ChattingModule } from './features/chatting.module/chatting.module';
-import { NotificationModule } from './features/notification.module/notification.module';
-import { AttachmentModule } from './features/attachments/attachment.module';
 import { PrismaModule } from './core/database/prisma/prisma.module';
 
 

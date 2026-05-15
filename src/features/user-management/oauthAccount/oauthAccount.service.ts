@@ -1,20 +1,21 @@
 import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { OAuthAccount, OAuthProvider, Prisma } from '@prisma/client';
 
 import { GenericService } from '../../../common/generic/generic.service';
 import { PrismaService } from 'src/core/database/prisma/prisma.service';
-// import { OAuthAccount, OAuthAccountDocument, AuthProvider } from './oauthAccount.schema';
 
 
 const publicOAuthAccountSelect = {
   id: true,
   
   isDeleted: true,
-  deletedAt: true,
   createdAt: true,
   updatedAt: true,
-};
+} satisfies Prisma.OAuthAccountSelect;
+
+type OAuthAccountRecord = Prisma.OAuthAccountGetPayload<{
+  select: typeof publicOAuthAccountSelect;
+}>;
 
 /**
  * OAuthAccount Service
@@ -23,7 +24,7 @@ const publicOAuthAccountSelect = {
  * Extends GenericService for CRUD operations
  */
 @Injectable()
-export class OAuthAccountService extends GenericService<any, Partial<any>> {
+export class OAuthAccountService extends GenericService<any, OAuthAccountRecord> {
   constructor(
     private readonly prisma: PrismaService,
     // @InjectModel(OAuthAccount.name) oauthModel: Model<OAuthAccountDocument>,
@@ -36,24 +37,21 @@ export class OAuthAccountService extends GenericService<any, Partial<any>> {
    * Find OAuth account by provider and provider ID
    */
   async findByProvider(
-    authProvider: AuthProvider,
+    authProvider: OAuthProvider,
     providerId: string,
-  ): Promise<OAuthAccountDocument | null> {
-    return this.model.findOne({
-      authProvider,
-      providerId,
-      isDeleted: false,
-    }).lean().exec();
+  ): Promise<OAuthAccount | null> {
+    return this.prisma.oauthAccount.findFirst({
+      where: { authProvider, providerId, isDeleted: false },
+    });
   }
 
   /**
    * Find OAuth account by user ID
    */
-  async findByUserId(userId: string): Promise<OAuthAccountDocument[]> {
-    return this.model.find({
-      userId: new Types.ObjectId(userId),
-      isDeleted: false,
-    }).lean().exec();
+  async findByUserId(userId: string): Promise<OAuthAccount[]> {
+    return this.prisma.oauthAccount.findMany({
+      where: { userId, isDeleted: false },
+    });
   }
 
   /**
@@ -61,13 +59,13 @@ export class OAuthAccountService extends GenericService<any, Partial<any>> {
    */
   async createOrLinkOAuthAccount(
     userId: string,
-    authProvider: AuthProvider,
+    authProvider: OAuthProvider,
     providerId: string,
     email: string,
     accessToken?: string,
     refreshToken?: string,
     idToken?: string,
-  ): Promise<OAuthAccountDocument> {
+  ): Promise<OAuthAccount> {
     // Check if OAuth account already exists
     const existing = await this.findByProvider(authProvider, providerId);
 
@@ -76,16 +74,18 @@ export class OAuthAccountService extends GenericService<any, Partial<any>> {
     }
 
     // Create new OAuth account
-    return this.model.create({
-      userId: new Types.ObjectId(userId),
-      authProvider,
-      providerId,
-      email: email.toLowerCase(),
-      accessToken,
-      refreshToken,
-      idToken,
-      isVerified: true,
-      lastUsedAt: new Date(),
+    return this.prisma.oauthAccount.create({
+      data: {
+        userId,
+        authProvider,
+        providerId,
+        email: email.toLowerCase(),
+        accessToken,
+        refreshToken,
+        idToken,
+        isVerified: true,
+        lastUsedAt: new Date(),
+      },
     });
   }
 
@@ -94,61 +94,56 @@ export class OAuthAccountService extends GenericService<any, Partial<any>> {
    */
   async linkOAuthAccount(
     userId: string,
-    authProvider: AuthProvider,
+    authProvider: OAuthProvider,
     providerId: string,
     email: string,
     accessToken?: string,
-  ): Promise<OAuthAccountDocument> {
+  ): Promise<OAuthAccount> {
     // Check if user already has this OAuth provider
-    const existing = await this.model.findOne({
-      userId: new Types.ObjectId(userId),
-      authProvider,
-      isDeleted: false,
-    }).exec();
+    const existing = await this.prisma.oauthAccount.findFirst({
+      where: { userId, authProvider, isDeleted: false },
+    });
 
     if (existing) {
       throw new ConflictException('User already has this OAuth provider linked');
     }
 
     // Create OAuth account
-    return this.model.create({
-      userId: new Types.ObjectId(userId),
-      authProvider,
-      providerId,
-      email: email.toLowerCase(),
-      accessToken,
-      isVerified: true,
-      lastUsedAt: new Date(),
+    return this.prisma.oauthAccount.create({
+      data: {
+        userId,
+        authProvider,
+        providerId,
+        email: email.toLowerCase(),
+        accessToken,
+        isVerified: true,
+        lastUsedAt: new Date(),
+      },
     });
   }
 
   /**
    * Update OAuth account last used timestamp
    */
-  async updateLastUsed(oauthAccountId: string): Promise<OAuthAccountDocument | null> {
-    return this.model.findByIdAndUpdate(
-      oauthAccountId,
-      { lastUsedAt: new Date() },
-      { new: true },
-    ).lean().exec();
+  async updateLastUsed(oauthAccountId: string): Promise<OAuthAccount | null> {
+    return this.prisma.oauthAccount.update({
+      where: { id: oauthAccountId },
+      data: { lastUsedAt: new Date() },
+    });
   }
 
   /**
    * Unlink OAuth account from user
    */
-  async unlinkOAuthAccount(userId: string, authProvider: AuthProvider): Promise<void> {
-    const result = await this.model.updateOne(
-      {
-        userId: new Types.ObjectId(userId),
-        authProvider,
-      },
-      {
+  async unlinkOAuthAccount(userId: string, authProvider: OAuthProvider): Promise<void> {
+    const result = await this.prisma.oauthAccount.updateMany({
+      where: { userId, authProvider, isDeleted: false },
+      data: {
         isDeleted: true,
-        deletedAt: new Date(),
       },
-    ).exec();
+    });
 
-    if (result.modifiedCount === 0) {
+    if (result.count === 0) {
       throw new NotFoundException('OAuth account not found');
     }
   }
@@ -163,20 +158,19 @@ export class OAuthAccountService extends GenericService<any, Partial<any>> {
     const accounts = await this.findByUserId(userId);
 
     return {
-      google: accounts.some(acc => acc.authProvider === AuthProvider.GOOGLE),
-      apple: accounts.some(acc => acc.authProvider === AuthProvider.APPLE),
+      google: accounts.some(acc => acc.authProvider === OAuthProvider.google),
+      apple: accounts.some(acc => acc.authProvider === OAuthProvider.apple),
     };
   }
 
   /**
    * Check if user has OAuth account
    */
-  async hasOAuthAccount(userId: string, authProvider: AuthProvider): Promise<boolean> {
-    const account = await this.model.findOne({
-      userId: new Types.ObjectId(userId),
-      authProvider,
-      isDeleted: false,
-    }).exec();
+  async hasOAuthAccount(userId: string, authProvider: OAuthProvider): Promise<boolean> {
+    const account = await this.prisma.oauthAccount.findFirst({
+      where: { userId, authProvider, isDeleted: false },
+      select: { id: true },
+    });
 
     return !!account;
   }

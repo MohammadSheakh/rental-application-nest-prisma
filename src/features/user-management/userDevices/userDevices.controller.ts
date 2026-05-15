@@ -14,7 +14,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@ne
 import { UserDevicesService } from './userDevices.service';
 import { RegisterDeviceDto } from './dto/register-device.dto';
 import { AuthGuard } from '../../../common/guards/auth.guard';
-import { UserPayload } from '../../../common/decorators/user.decorator';
+import { UserPayload as CurrentUser } from '../../../common/decorators/user.decorator';
+import type { UserPayload } from '../../../common/types/user-payload.type';
 import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
 
 /**
@@ -41,7 +42,7 @@ export class UserDevicesController {
   })
   @ApiResponse({ status: 201, description: 'Device registered successfully' })
   async registerDevice(
-    @UserPayload() user: UserPayload,
+    @CurrentUser() user: UserPayload,
     @Body() registerDeviceDto: RegisterDeviceDto,
   ) {
     return await this.userDevicesService.registerOrUpdateDevice(
@@ -62,7 +63,7 @@ export class UserDevicesController {
     description: 'Get all registered devices for current user',
   })
   @ApiResponse({ status: 200, description: 'Devices retrieved successfully' })
-  async getUserDevices(@UserPayload() user: UserPayload) {
+  async getUserDevices(@CurrentUser() user: UserPayload) {
     return await this.userDevicesService.getUserDevices(user.userId);
   }
 
@@ -79,7 +80,7 @@ export class UserDevicesController {
   @ApiResponse({ status: 200, description: 'Device removed successfully' })
   @ApiResponse({ status: 404, description: 'Device not found' })
   async removeDevice(
-    @UserPayload() user: UserPayload,
+    @CurrentUser() user: UserPayload,
     @Param('deviceId') deviceId: string,
   ) {
     return await this.userDevicesService.removeDevice(user.userId, deviceId);
@@ -97,7 +98,7 @@ export class UserDevicesController {
   @ApiParam({ name: 'deviceId', description: 'Device ID' })
   @ApiResponse({ status: 200, description: 'Push settings updated successfully' })
   async updatePushSettings(
-    @UserPayload() user: UserPayload,
+    @CurrentUser() user: UserPayload,
     @Param('deviceId') deviceId: string,
     @Body('enabled') enabled: boolean,
   ) {
@@ -115,7 +116,7 @@ export class UserDevicesController {
   })
   @ApiResponse({ status: 200, description: 'Device removed successfully' })
   async removeDeviceByToken(
-    @UserPayload() user: UserPayload,
+    @CurrentUser() user: UserPayload,
     @Body('fcmToken') fcmToken: string,
   ) {
     await this.userDevicesService.removeDeviceByToken(user.userId, fcmToken);

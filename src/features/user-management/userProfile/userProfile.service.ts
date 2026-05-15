@@ -1,10 +1,8 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Prisma, UserProfile } from '@prisma/client';
 import { Redis } from 'ioredis';
 
 import { GenericService } from '../../../common/generic/generic.service';
-import { UserProfile, UserProfileDocument } from './userProfile.schema';
 
 import { PrismaService } from 'src/core/database/prisma/prisma.service';
 import { REDIS_CLIENT } from 'src/core/database/redis/redis.constants';
@@ -15,10 +13,13 @@ const publicUserProfileSelect = {
 
 
   isDeleted: true,
-  deletedAt: true,
   createdAt: true,
   updatedAt: true,
-};
+} satisfies Prisma.UserProfileSelect;
+
+type UserProfileRecord = Prisma.UserProfileGetPayload<{
+  select: typeof publicUserProfileSelect;
+}>;
 
 
 /**
@@ -28,7 +29,7 @@ const publicUserProfileSelect = {
  * Adds custom business logic methods
  */
 @Injectable()
-export class UserProfileService extends GenericService<typeof UserProfile, UserProfileDocument> {
+export class UserProfileService extends GenericService<any, UserProfileRecord> {
   private readonly PROFILE_CACHE_PREFIX = 'userProfile:';
   private readonly PROFILE_CACHE_TTL = 900; // 15 minutes
 
@@ -45,14 +46,16 @@ export class UserProfileService extends GenericService<typeof UserProfile, UserP
   /**
    * Find profile by user ID
    */
-  async findByUserId(userId: string): Promise<UserProfileDocument | null> {
-    return this.model.findOne({ userId: new Types.ObjectId(userId), isDeleted: false }).lean().exec();
+  async findByUserId(userId: string): Promise<UserProfile | null> {
+    return this.prisma.userProfile.findFirst({
+      where: { userId, isDeleted: false },
+    });
   }
 
   /**
    * Find profile by user ID with cache
    */
-  async findByUserIdWithCache(userId: string): Promise<UserProfileDocument | null> {
+  async findByUserIdWithCache(userId: string): Promise<UserProfile | null> {
     const cacheKey = `${this.PROFILE_CACHE_PREFIX}${userId}`;
 
     // Try cache first
@@ -80,18 +83,20 @@ export class UserProfileService extends GenericService<typeof UserProfile, UserP
   /**
    * Update profile by user ID
    */
-  async updateByUserId(userId: string, data: Partial<UserProfile>): Promise<UserProfileDocument | null> {
+  async updateByUserId(
+    userId: string,
+    data: Prisma.UserProfileUpdateInput,
+  ): Promise<UserProfile | null> {
     const profile = await this.findByUserId(userId);
 
     if (!profile) {
       throw new NotFoundException('User profile not found');
     }
 
-    const result = await this.model.findOneAndUpdate(
-      { userId: new Types.ObjectId(userId) },
+    const result = await this.prisma.userProfile.update({
+      where: { userId },
       data,
-      { new: true, runValidators: true },
-    ).lean().exec();
+    });
 
     // Invalidate cache
     if (result) {
@@ -112,14 +117,14 @@ export class UserProfileService extends GenericService<typeof UserProfile, UserP
   /**
    * Update support mode preference
    */
-  async updateSupportMode(userId: string, supportMode: string): Promise<UserProfileDocument | null> {
+  async updateSupportMode(userId: string, supportMode: string): Promise<UserProfile | null> {
     return this.updateByUserId(userId, { supportMode });
   }
 
   /**
    * Update notification style preference
    */
-  async updateNotificationStyle(userId: string, notificationStyle: string): Promise<UserProfileDocument | null> {
+  async updateNotificationStyle(userId: string, notificationStyle: string): Promise<UserProfile | null> {
     return this.updateByUserId(userId, { notificationStyle });
   }
 
@@ -127,13 +132,20 @@ export class UserProfileService extends GenericService<typeof UserProfile, UserP
    * Get profile with user details
    */
   async getProfileWithUser(userId: string): Promise<any> {
-    const profile = await this.model.findOne({
-      userId: new Types.ObjectId(userId),
-      isDeleted: false,
-    })
-    .populate('user', 'name email profileImage role')
-    .lean()
-    .exec();
+    const profile = await this.prisma.userProfile.findFirst({
+      where: { userId, isDeleted: false },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            profileImageUrl: true,
+            role: true,
+          },
+        },
+      },
+    });
 
     if (!profile) {
       throw new NotFoundException('User profile not found');

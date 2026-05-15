@@ -7,6 +7,9 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "prisma:schema:build": "node prisma/scripts/build-prisma-schemaV2.js",
+    "prisma:generate": "pnpm prisma generate --schema prisma/schema.prisma",
+    "prisma:sync": "pnpm run prisma:schema:build && pnpm run prisma:generate",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

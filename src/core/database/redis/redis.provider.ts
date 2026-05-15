@@ -1,5 +1,5 @@
 import { Provider, Logger } from '@nestjs/common';
-import { createClient, RedisClientType } from 'redis';
+import Redis from 'ioredis';
 import { REDIS_CLIENT } from './redis.constants';
 import { ConfigService } from '@nestjs/config';
 
@@ -16,7 +16,7 @@ import { ConfigService } from '@nestjs/config';
  */
 export const RedisProvider: Provider = {
   provide: REDIS_CLIENT,
-  useFactory: async (configService: ConfigService): Promise<RedisClientType | null> => {
+  useFactory: async (configService: ConfigService): Promise<Redis | null> => {
     const logger = new Logger('RedisProvider');
     const host = configService.get<string>('REDIS_HOST', 'localhost');
     const port = configService.get<number>('REDIS_PORT', 6379);
@@ -24,28 +24,23 @@ export const RedisProvider: Provider = {
     const db = configService.get<number>('REDIS_DB', 0);
 
     try {
-      // Create Redis client
-      const client = createClient({
-        socket: {
-          host,
-          port,
-          reconnectStrategy: (retries) => {
-            // Exponential backoff reconnection strategy
-            if (retries > 10) {
-              logger.error('Max reconnection attempts reached');
-              // In production, return null instead of crashing
-              if (process.env.NODE_ENV === 'production') {
-                logger.warn('Redis unavailable - caching disabled');
-                return null; // Stop reconnecting
-              }
-              return new Error('Redis max reconnection attempts reached');
-            }
-            logger.log(`Reconnecting attempt ${retries}...`);
-            return Math.min(retries * 100, 3000);
-          },
-        },
+      const client = new Redis({
+        host,
+        port,
         password: password || undefined,
-        database: db,
+        db,
+        retryStrategy: (retries) => {
+          if (retries > 10) {
+            logger.error('Max reconnection attempts reached');
+            if (process.env.NODE_ENV === 'production') {
+              logger.warn('Redis unavailable - caching disabled');
+              return null;
+            }
+            return null;
+          }
+          logger.log(`Reconnecting attempt ${retries}...`);
+          return Math.min(retries * 100, 3000);
+        },
       });
 
       // Connection event handlers
@@ -53,24 +48,14 @@ export const RedisProvider: Provider = {
         logger.error('Redis Client Error:', err.message);
       });
 
-      client.on('connect', () => {
-        logger.log('Connected successfully');
-      });
+      client.on('connect', () => logger.log('Connected successfully'));
 
-      client.on('ready', () => {
-        logger.log('Client ready');
-      });
+      client.on('ready', () => logger.log('Client ready'));
 
-      client.on('reconnecting', () => {
-        logger.log('Reconnecting...');
-      });
+      client.on('reconnecting', () => logger.log('Reconnecting...'));
 
-      client.on('end', () => {
-        logger.log('Connection ended');
-      });
+      client.on('end', () => logger.log('Connection ended'));
 
-      // Connect to Redis
-      await client.connect();
       logger.log('Connection established');
       
       return client;

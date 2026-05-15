@@ -10,7 +10,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 
 import { OAuthAccountService } from './oauthAccount.service';
 import { AuthGuard } from '../../../common/guards/auth.guard';
-import { UserPayload } from '../../../common/decorators/user.decorator';
+import { UserPayload as CurrentUser } from '../../../common/decorators/user.decorator';
+import type { UserPayload } from '../../../common/types/user-payload.type';
 import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
 
 /**
@@ -36,7 +37,7 @@ export class OAuthAccountController {
     description: 'Get all OAuth providers linked to current user',
   })
   @ApiResponse({ status: 200, description: 'OAuth accounts retrieved successfully' })
-  async getLinkedAccounts(@UserPayload() user: UserPayload) {
+  async getLinkedAccounts(@CurrentUser() user: UserPayload) {
     return await this.oauthAccountService.getUserOAuthAccounts(user.userId);
   }
 
@@ -50,7 +51,7 @@ export class OAuthAccountController {
     description: 'Get full details of linked OAuth accounts',
   })
   @ApiResponse({ status: 200, description: 'OAuth accounts retrieved successfully' })
-  async getOAuthAccounts(@UserPayload() user: UserPayload) {
+  async getOAuthAccounts(@CurrentUser() user: UserPayload) {
     return await this.oauthAccountService.findByUserId(user.userId);
   }
 
@@ -66,7 +67,7 @@ export class OAuthAccountController {
   @ApiResponse({ status: 200, description: 'OAuth account unlinked successfully' })
   @ApiResponse({ status: 404, description: 'OAuth account not found' })
   async unlinkOAuthAccount(
-    @UserPayload() user: UserPayload,
+    @CurrentUser() user: UserPayload,
     @Param('provider') provider: string,
   ) {
     const authProvider = provider.toLowerCase() as 'google' | 'apple';

@@ -11,7 +11,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { UserProfileService } from './userProfile.service';
 import { UpdateUserProfileDto } from './dto/update-userProfile.dto';
 import { AuthGuard } from '../../../common/guards/auth.guard';
-import { UserPayload } from '../../../common/decorators/user.decorator';
+import { UserPayload as CurrentUser } from '../../../common/decorators/user.decorator';
+import type { UserPayload } from '../../../common/types/user-payload.type';
 import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
 
 /**
@@ -37,7 +38,7 @@ export class UserProfileController {
     description: 'Get current user profile with extended information',
   })
   @ApiResponse({ status: 200, description: 'Profile details retrieved successfully' })
-  async getProfileDetails(@UserPayload() user: UserPayload) {
+  async getProfileDetails(@CurrentUser() user: UserPayload) {
     return await this.userProfileService.findByUserIdWithCache(user.userId);
   }
 
@@ -52,7 +53,7 @@ export class UserProfileController {
   })
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   async updateProfileDetails(
-    @UserPayload() user: UserPayload,
+    @CurrentUser() user: UserPayload,
     @Body() updateProfileDto: UpdateUserProfileDto,
   ) {
     return await this.userProfileService.updateByUserId(user.userId, updateProfileDto);
@@ -69,7 +70,7 @@ export class UserProfileController {
   })
   @ApiResponse({ status: 200, description: 'Support mode updated successfully' })
   async updateSupportMode(
-    @UserPayload() user: UserPayload,
+    @CurrentUser() user: UserPayload,
     @Body('supportMode') supportMode: string,
   ) {
     return await this.userProfileService.updateSupportMode(user.userId, supportMode);
@@ -86,7 +87,7 @@ export class UserProfileController {
   })
   @ApiResponse({ status: 200, description: 'Notification style updated successfully' })
   async updateNotificationStyle(
-    @UserPayload() user: UserPayload,
+    @CurrentUser() user: UserPayload,
     @Body('notificationStyle') notificationStyle: string,
   ) {
     return await this.userProfileService.updateNotificationStyle(user.userId, notificationStyle);
@@ -102,7 +103,7 @@ export class UserProfileController {
     description: 'Get user profile with user details',
   })
   @ApiResponse({ status: 200, description: 'Full profile retrieved successfully' })
-  async getFullProfile(@UserPayload() user: UserPayload) {
+  async getFullProfile(@CurrentUser() user: UserPayload) {
     return await this.userProfileService.getProfileWithUser(user.userId);
   }
 }

@@ -5,13 +5,12 @@ import { AppModule } from './app.module';
 
 // Import global filters, interceptors, guards
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { MongooseExceptionFilter } from './common/filters/mongoose-exception.filter';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 // Import security packages
-import * as helmet from 'helmet';
-import * as compression from 'compression';
+import helmet from 'helmet';
+import compression from 'compression';
 import { NestFactory } from '@nestjs/core';
 
 /**
@@ -93,9 +92,6 @@ async function bootstrap() {
 
   // HTTP exception filter
   app.useGlobalFilters(new HttpExceptionFilter());
-
-  // Mongoose exception filter
-  app.useGlobalFilters(new MongooseExceptionFilter());
 
   // ────────────────────────────────────────────────────────────────────────
   // Global Interceptors

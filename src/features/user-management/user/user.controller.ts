@@ -14,7 +14,7 @@ import { UserService } from './user.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { AuthGuard } from '../../../common/guards/auth.guard';
 import { User as CurrentUser } from '../../../common/decorators/user.decorator';
-import type { UserPayload } from '../../../common/guards/auth.guard';
+import type { UserPayload } from '../../../common/types/user-payload.type';
 import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
 
 /**
