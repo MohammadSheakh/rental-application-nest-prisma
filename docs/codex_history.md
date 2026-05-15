@@ -90,3 +90,17 @@ Fixed DTOs that still imported old Mongo schema enums.
 Removed stale top-level imports for disabled modules from AppModule.
 Removed the Mongo exception filter from main.ts.
 Updated tsconfig.build.json so disabled/incomplete modules like attachments/chat/notification/payment/socket/queue are not compiled while they are not enabled in AppModule.
+
+
+=================>
+
+Here's what I did:
+   1. Schema Update: Removed the url property from the datasource block in
+      prisma/schema/base/datasource.prisma, as Prisma 7 no longer supports it there for direct connections. 
+   2. Prisma Client Regeneration: Ran pnpm run prisma:sync to rebuild the schema and regenerate the client. 
+   3. Adapter Integration: Installed pg and updated PrismaService to use the @prisma/adapter-pg driver.
+      This is the new standard in Prisma 7 for direct database connections when the URL is not in the
+      schema.
+   4. Validation: Added DATABASE_URL to your ConfigModule validation to ensure it's always present.
+
+  The project now builds successfully."

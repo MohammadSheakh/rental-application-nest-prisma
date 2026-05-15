@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PrismaModule } from '../../core/database/prisma/prisma.module';
+import { AuthModule } from '../authentication/auth.module';
 
 import { UserController } from './user/user.controller';
 import { UserService } from './user/user.service';
@@ -53,6 +54,9 @@ import { RedisModule } from '../../core/database/redis/redis.module';
 
     // Prisma Module (primary database access for User service)
     PrismaModule,
+
+    // Auth Module (required for AuthGuard / JwtService)
+    forwardRef(() => AuthModule),
   ],
   controllers: [UserController, UserProfileController, UserDevicesController, OAuthAccountController, UserRoleDataController],
   providers: [UserService, UserProfileService, UserDevicesService, OAuthAccountService, UserRoleDataService],

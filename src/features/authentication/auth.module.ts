@@ -76,6 +76,6 @@ import { OAuthVerificationService } from './oauth/oauth-verification.service';
     EmailService,
     OAuthVerificationService,
   ],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

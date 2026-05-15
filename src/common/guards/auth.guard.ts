@@ -1,95 +1,75 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import type { UserPayload } from '../types/user-payload.type';
 
 /**
- * User Payload Interface
- * Extracted from JWT token
- * MOVE THIS TO types/ directory for better organization
- */
-// export interface UserPayload {
-//   userId: string;
-//   email: string;
-//   role: string;
-//   iat?: number;
-//   exp?: number;
-// }
-
-/**
  * Authentication Guard
  * 
  * 📚 INDUSTRY STANDARD IMPLEMENTATION
- * 
- * Features:
- * ✅ JWT token validation
- * ✅ Public route support (via @Public() decorator)
- * ✅ User payload extraction
- * ✅ Request context attachment
- * 
- * Usage:
- * @UseGuards(AuthGuard)
- * async getProfile(@User() user: UserPayload) { ... }
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     private reflector: Reflector,
+    private configService: ConfigService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Check if route is public (no auth required)
+    // Check if route is public
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
 
-    if (isPublic) {
-      return true;
-    }
-
-    // Extract request from context
+    // Extract request
     const request = context.switchToHttp().getRequest<Request>();
     const token = this.extractTokenFromHeader(request);
 
-    // Token not found
+    if (isPublic) {
+      // Even if public, if a token exists, try to decode it for @User()
+      if (token) {
+        try {
+          const payload = await this.jwtService.verifyAsync(token, {
+            secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+          });
+          request['user'] = payload;
+        } catch {
+          // Ignore errors for public routes
+        }
+      }
+      return true;
+    }
+
+    // Token not found for private route
     if (!token) {
       throw new UnauthorizedException('Authentication token is required');
     }
 
     try {
-      // Verify and decode token
+      // Verify token
       const payload: UserPayload = await this.jwtService.verifyAsync(token, {
-        secret: process.env.JWT_ACCESS_SECRET,
+        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       });
 
-      // Attach user payload to request object
-      // Can be accessed via @User() decorator in controllers
+      // Attach payload
       request['user'] = payload;
     } catch (error) {
-      // Token verification failed
       if (error.name === 'TokenExpiredError') {
         throw new UnauthorizedException('Token has expired');
       }
-      if (error.name === 'JsonWebTokenError') {
-        throw new UnauthorizedException('Invalid token');
-      }
-      throw new UnauthorizedException('Authentication failed');
+      throw new UnauthorizedException('Invalid token');
     }
 
     return true;
   }
 
-  /**
-   * Extract JWT token from Authorization header
-   * Expected format: "Bearer <token>" (case-insensitive)
-   */
   private extractTokenFromHeader(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    // Handle both "Bearer" and "bearer" (case-insensitive)
     return type?.toLowerCase() === 'bearer' ? token : undefined;
   }
 }
