@@ -19,30 +19,20 @@ import { RegisterDto } from './dto/register.dto';
 import { OAuthLoginDto } from './dto/oauth-login.dto';
 import { CreateOtpDto, VerifyOtpDto } from '../otp/dto/create-otp.dto';
 import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { SlidingWindowRateLimitGuard } from '../../../common/guards/sliding-window-rate-limit.guard';
+import { RateLimit } from '../../../common/decorators/rate-limit.decorator';
+import { GLOBAL_RATE_LIMITS } from '../../../common/constants/rate-limit.constants';
 
 /**
  * Auth Controller
  * 
- * 📚 EXPRESS → NESTJS TRANSITION
+ * 📚 SENIOR LEVEL IMPLEMENTATION
  * 
- * Express Pattern:
- * - router.post('/login', authController.login)
- * - Manual response formatting: sendResponse(res, {...})
- * - Manual cookie setting: res.cookie(...)
- * - req.body.email, req.body.password
- * 
- * NestJS Pattern:
- * - @Post('login') decorator
- * - @Body() decorator for DTO validation
- * - @Res({ passthrough: true }) for cookies
- * - Automatic response transformation via interceptor
- * 
- * Key Benefits:
- * ✅ Automatic validation (DTOs)
- * ✅ Cleaner code (decorators)
- * ✅ Better testability (DI)
- * ✅ Swagger documentation (auto-generated)
+ * Features:
+ * ✅ Sliding Window Rate Limiting (Redis)
+ * ✅ brute-force protection via auth preset
+ * ✅ HTTP-only cookie management
+ * ✅ Global response transformation
  */
 @ApiTags('Authentication')
 @Controller('auth')
@@ -53,20 +43,17 @@ export class AuthController {
   /**
    * POST /auth/login
    * Authenticate user and return tokens
-   * 
-   * @param loginDto - Login credentials
-   * @param res - Express response (for cookies)
-   * @returns User info and access token
    */
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(SlidingWindowRateLimitGuard)
+  @RateLimit(GLOBAL_RATE_LIMITS.auth)
   @ApiOperation({ 
     summary: 'User login',
     description: 'Authenticate user with email and password',
   })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  @UseGuards(ThrottlerGuard)
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -84,19 +71,17 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.accessToken,
-      // refreshToken is in cookie, not returned in body
     };
   }
 
   /**
    * POST /auth/register
    * Register new user
-   * 
-   * @param registerDto - Registration data
-   * @returns User info (without password)
    */
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(SlidingWindowRateLimitGuard)
+  @RateLimit(GLOBAL_RATE_LIMITS.strict)
   @ApiOperation({ 
     summary: 'User registration',
     description: 'Register a new user account',

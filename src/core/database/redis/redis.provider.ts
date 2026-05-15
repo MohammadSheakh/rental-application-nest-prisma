@@ -4,72 +4,45 @@ import { REDIS_CLIENT } from './redis.constants';
 import { ConfigService } from '@nestjs/config';
 
 /**
+ * Redis configuration options shared across the application
+ */
+export const getRedisOptions = (configService: ConfigService) => ({
+  host: configService.get<string>('REDIS_HOST', 'localhost'),
+  port: configService.get<number>('REDIS_PORT', 6379),
+  password: configService.get<string>('REDIS_PASSWORD', '') || undefined,
+  db: configService.get<number>('REDIS_DB', 0),
+});
+
+/**
  * Redis Provider
  * 
  * 📚 INDUSTRY STANDARD IMPLEMENTATION
- * 
- * Creates and configures Redis client with:
- * - Connection pooling
- * - Error handling
- * - Graceful degradation (doesn't crash app)
- * - Health check support
  */
 export const RedisProvider: Provider = {
   provide: REDIS_CLIENT,
   useFactory: async (configService: ConfigService): Promise<Redis | null> => {
     const logger = new Logger('RedisProvider');
-    const host = configService.get<string>('REDIS_HOST', 'localhost');
-    const port = configService.get<number>('REDIS_PORT', 6379);
-    const password = configService.get<string>('REDIS_PASSWORD', '');
-    const db = configService.get<number>('REDIS_DB', 0);
+    const options = getRedisOptions(configService);
 
     try {
       const client = new Redis({
-        host,
-        port,
-        password: password || undefined,
-        db,
+        ...options,
         retryStrategy: (retries) => {
           if (retries > 10) {
             logger.error('Max reconnection attempts reached');
-            if (process.env.NODE_ENV === 'production') {
-              logger.warn('Redis unavailable - caching disabled');
-              return null;
-            }
             return null;
           }
-          logger.log(`Reconnecting attempt ${retries}...`);
           return Math.min(retries * 100, 3000);
         },
       });
 
-      // Connection event handlers
-      client.on('error', (err) => {
-        logger.error('Redis Client Error:', err.message);
-      });
-
+      client.on('error', (err) => logger.error('Redis Client Error:', err.message));
       client.on('connect', () => logger.log('Connected successfully'));
 
-      client.on('ready', () => logger.log('Client ready'));
-
-      client.on('reconnecting', () => logger.log('Reconnecting...'));
-
-      client.on('end', () => logger.log('Connection ended'));
-
-      logger.log('Connection established');
-      
       return client;
     } catch (error) {
       logger.error('Connection failed:', error.message);
-      
-      // In production, don't crash - return null
-      if (process.env.NODE_ENV === 'production') {
-        logger.warn('Redis unavailable in production - caching disabled');
-        return null;
-      }
-      
-      // In development, throw error to alert developer
-      throw error;
+      return null;
     }
   },
   inject: [ConfigService],

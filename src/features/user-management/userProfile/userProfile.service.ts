@@ -1,17 +1,15 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, Logger } from '@nestjs/common';
 import { Prisma, UserProfile } from '@prisma/client';
-import { Redis } from 'ioredis';
+import Redis from 'ioredis';
 
 import { GenericService } from '../../../common/generic/generic.service';
-
 import { PrismaService } from 'src/core/database/prisma/prisma.service';
 import { REDIS_CLIENT } from 'src/core/database/redis/redis.constants';
+import { USER_CACHE_CONFIG } from '../user/user.constants';
 
 
 const publicUserProfileSelect = {
   id: true,
-
-
   isDeleted: true,
   createdAt: true,
   updatedAt: true,
@@ -25,55 +23,48 @@ type UserProfileRecord = Prisma.UserProfileGetPayload<{
 /**
  * UserProfile Service
  * 
- * Extends GenericService for CRUD operations
- * Adds custom business logic methods
+ * 📚 SENIOR LEVEL IMPLEMENTATION
  */
 @Injectable()
 export class UserProfileService extends GenericService<any, UserProfileRecord> {
-  private readonly PROFILE_CACHE_PREFIX = 'userProfile:';
-  private readonly PROFILE_CACHE_TTL = 900; // 15 minutes
+  private readonly logger = new Logger(UserProfileService.name);
 
   constructor(
-    private readonly prisma: PrismaService,   // ← replaces @InjectModel
-        
-    // @InjectModel(UserProfile.name) profileModel: Model<UserProfileDocument>,
-    @Inject(REDIS_CLIENT) private redisClient: Redis,
+    private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redisClient: Redis | null,
   ) {
-    // super(profileModel);
     super((prisma as any).userProfile, publicUserProfileSelect);
   }
 
-  /**
-   * Find profile by user ID
-   */
-  async findByUserId(userId: string): Promise<UserProfile | null> {
-    return this.prisma.userProfile.findFirst({
-      where: { userId, isDeleted: false },
-    });
+  private getCacheKey(userId: string): string {
+    return `${USER_CACHE_CONFIG.PREFIX}:profile:${userId}`;
   }
 
   /**
    * Find profile by user ID with cache
    */
   async findByUserIdWithCache(userId: string): Promise<UserProfile | null> {
-    const cacheKey = `${this.PROFILE_CACHE_PREFIX}${userId}`;
+    const cacheKey = this.getCacheKey(userId);
 
-    // Try cache first
-    const cached = await this.redisClient.get(cacheKey);
-    if (cached) {
-      return JSON.parse(cached);
+    try {
+      if (this.redisClient) {
+        const cached = await this.redisClient.get(cacheKey);
+        if (cached) return JSON.parse(cached);
+      }
+    } catch (err) {
+      this.logger.error(`Cache fetch error: ${err.message}`);
     }
 
-    // Cache miss - query database
-    const profile = await this.findByUserId(userId);
+    const profile = await this.prisma.userProfile.findFirst({
+      where: { userId, isDeleted: false },
+    });
 
-    if (profile) {
-      // Cache for 15 minutes
+    if (profile && this.redisClient) {
       await this.redisClient.set(
         cacheKey,
         JSON.stringify(profile),
         'EX',
-        this.PROFILE_CACHE_TTL,
+        USER_CACHE_CONFIG.PROFILE,
       );
     }
 
@@ -81,13 +72,15 @@ export class UserProfileService extends GenericService<any, UserProfileRecord> {
   }
 
   /**
-   * Update profile by user ID
+   * Update profile with targeted invalidation
    */
   async updateByUserId(
     userId: string,
     data: Prisma.UserProfileUpdateInput,
   ): Promise<UserProfile | null> {
-    const profile = await this.findByUserId(userId);
+    const profile = await this.prisma.userProfile.findFirst({
+      where: { userId, isDeleted: false },
+    });
 
     if (!profile) {
       throw new NotFoundException('User profile not found');
@@ -98,7 +91,6 @@ export class UserProfileService extends GenericService<any, UserProfileRecord> {
       data,
     });
 
-    // Invalidate cache
     if (result) {
       await this.invalidateCache(userId);
     }
@@ -107,11 +99,19 @@ export class UserProfileService extends GenericService<any, UserProfileRecord> {
   }
 
   /**
-   * Invalidate profile cache
+   * Invalidate profile cache using patterns
    */
   async invalidateCache(userId: string): Promise<void> {
-    const cacheKey = `${this.PROFILE_CACHE_PREFIX}${userId}`;
-    await this.redisClient.del(cacheKey);
+    if (!this.redisClient) return;
+    
+    try {
+      // Clear both profile and generic user stats if needed
+      const keys = USER_CACHE_CONFIG.INVALIDATION_PATTERNS.PROFILE_UPDATED(userId);
+      await this.redisClient.del(this.getCacheKey(userId), ...keys);
+      this.logger.debug(`Invalidated cache for user profile: ${userId}`);
+    } catch (err) {
+      this.logger.error(`Cache invalidation error: ${err.message}`);
+    }
   }
 
   /**
@@ -132,7 +132,14 @@ export class UserProfileService extends GenericService<any, UserProfileRecord> {
    * Get profile with user details
    */
   async getProfileWithUser(userId: string): Promise<any> {
-    const profile = await this.prisma.userProfile.findFirst({
+    const profile = await this.findByUserIdWithCache(userId);
+
+    if (!profile) {
+      throw new NotFoundException('User profile not found');
+    }
+
+    // Here we can merge or fetch fresh user data
+    return await this.prisma.userProfile.findFirst({
       where: { userId, isDeleted: false },
       include: {
         user: {
@@ -146,11 +153,5 @@ export class UserProfileService extends GenericService<any, UserProfileRecord> {
         },
       },
     });
-
-    if (!profile) {
-      throw new NotFoundException('User profile not found');
-    }
-
-    return profile;
   }
 }

@@ -7,3 +7,7 @@ pnpm prisma generate --schema prisma/schema.prisma
 
 // Now run the following command to generate the Prisma Client:
 > pnpm dlx prisma generate
+
+
+// watch nvidia gpu .. 
+watch -n 1 nvidia-smi

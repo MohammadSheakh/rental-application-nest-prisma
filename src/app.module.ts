@@ -8,6 +8,7 @@ import { RedisModule } from './core/database/redis/redis.module';
 import { AuthModule } from './features/authentication/auth.module';
 import { UserModule } from './features/user-management/user.module';
 import { PrismaModule } from './core/database/prisma/prisma.module';
+import { BullMQModule } from './core/queue/bullmq.module';
 
 
 /**
@@ -43,7 +44,7 @@ import { PrismaModule } from './core/database/prisma/prisma.module';
     // DatabaseModule,    // MongoDB connection
     PrismaModule,
     RedisModule,       // Redis connection
-    // BullMQModule,      // ⭐ BullMQ queues (5 queues)
+    BullMQModule,      // ⭐ BullMQ queues (5 queues)
     // SocketModule,      // ⭐ Socket.IO gateway (real-time)
 
     // ──────────────────────────────────────────────────────────────────────
@@ -64,5 +65,7 @@ import { PrismaModule } from './core/database/prisma/prisma.module';
     // SubscriptionModule,         // Subscriptions
     // PaymentModule,              // Payments
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

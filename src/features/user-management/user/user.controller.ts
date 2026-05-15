@@ -16,32 +16,24 @@ import { AuthGuard } from '../../../common/guards/auth.guard';
 import { User as CurrentUser } from '../../../common/decorators/user.decorator';
 import type { UserPayload } from '../../../common/types/user-payload.type';
 import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
+import { SlidingWindowRateLimitGuard } from '../../../common/guards/sliding-window-rate-limit.guard';
+import { RateLimit } from '../../../common/decorators/rate-limit.decorator';
+import { USER_RATE_LIMITS } from './user.constants';
 
 /**
  * User Controller
  * 
- * 📚 EXPRESS → NESTJS TRANSITION
+ * 📚 SENIOR LEVEL IMPLEMENTATION
  * 
- * Express Pattern:
- * - class UserController extends GenericController<typeof User, IUser>
- * - constructor() { super(new UserService(), 'User'); }
- * - Manual route decorators
- * 
- * NestJS Pattern:
- * - @Controller() decorator
- * - Extend generic controller
- * - @UseGuards() for authentication
- * - @User() decorator for user payload
- * 
- * Key Benefits:
- * ✅ Automatic CRUD endpoints
- * ✅ Easy to add custom endpoints
- * ✅ Swagger documentation
- * ✅ Type-safe operations
+ * Features:
+ * ✅ Automatic CRUD via GenericController
+ * ✅ Sliding Window Rate Limiting per endpoint
+ * ✅ Role-based access control (via AuthGuard)
+ * ✅ Pattern-based Redis caching
  */
 @ApiTags('Users')
 @Controller('users')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, SlidingWindowRateLimitGuard)
 @UseInterceptors(TransformResponseInterceptor)
 @ApiBearerAuth()
 export class UserController extends GenericController {
@@ -54,6 +46,7 @@ export class UserController extends GenericController {
    * Get current user profile
    */
   @Get('profile')
+  @RateLimit(USER_RATE_LIMITS.PROFILE_ACCESS)
   @ApiOperation({ 
     summary: 'Get my profile',
     description: 'Get current authenticated user profile with statistics',
@@ -80,6 +73,7 @@ export class UserController extends GenericController {
    * Update current user profile
    */
   @Put('profile')
+  @RateLimit(USER_RATE_LIMITS.PROFILE_UPDATE)
   @ApiOperation({ 
     summary: 'Update my profile',
     description: 'Update current authenticated user profile information',
@@ -109,6 +103,7 @@ export class UserController extends GenericController {
    * Update user's preferred time for task scheduling
    */
   @Put('preferred-time')
+  @RateLimit(USER_RATE_LIMITS.PROFILE_UPDATE)
   @ApiOperation({ 
     summary: 'Update preferred time',
     description: 'Update user preferred time for task scheduling (HH:mm format)',
@@ -126,6 +121,7 @@ export class UserController extends GenericController {
    * Get current user statistics
    */
   @Get('statistics')
+  @RateLimit(USER_RATE_LIMITS.PROFILE_ACCESS)
   @ApiOperation({ 
     summary: 'Get my statistics',
     description: 'Get current user task statistics',
@@ -140,6 +136,7 @@ export class UserController extends GenericController {
    * Alias for getProfile
    */
   @Get('me')
+  @RateLimit(USER_RATE_LIMITS.PROFILE_ACCESS)
   @ApiOperation({ 
     summary: 'Get current user',
     description: 'Get current authenticated user information',

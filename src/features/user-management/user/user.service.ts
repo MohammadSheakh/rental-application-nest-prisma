@@ -1,15 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import Redis from 'ioredis';
 
 import { GenericService } from '../../../common/generic/generic.service';
 import { REDIS_CLIENT } from '../../../core/database/redis/redis.constants';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
-
-type CacheClient = {
-  get(key: string): Promise<string | null>;
-  set(key: string, value: string, options?: { EX?: number }): Promise<unknown>;
-  del(key: string): Promise<unknown>;
-};
+import { USER_CACHE_CONFIG } from './user.constants';
 
 const publicUserSelect = {
   id: true,
@@ -43,14 +39,22 @@ type UserWithPasswordRecord = Prisma.UserGetPayload<{
 
 @Injectable()
 export class UserService extends GenericService<any, PublicUserRecord> {
-  private readonly USER_CACHE_PREFIX = 'user:';
-  private readonly USER_CACHE_TTL = 900; // 15 minutes
+  private readonly logger = new Logger(UserService.name);
 
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(REDIS_CLIENT) private readonly redisClient: CacheClient | null,
+    @Inject(REDIS_CLIENT) private readonly redisClient: Redis | null,
   ) {
     super((prisma as any).user, publicUserSelect);
+  }
+
+  /**
+   * Cache Key Generator
+   */
+  private getCacheKey(type: 'profile' | 'stats', id: string): string {
+    return type === 'profile' 
+      ? `${USER_CACHE_CONFIG.PREFIX}:${id}` 
+      : `${USER_CACHE_CONFIG.PREFIX}:stats:${id}`;
   }
 
   async findByEmail(
@@ -66,27 +70,55 @@ export class UserService extends GenericService<any, PublicUserRecord> {
     });
   }
 
+  /**
+   * Find by ID with Sliding Window Cache logic
+   */
   async findByIdWithCache(id: string): Promise<PublicUserRecord | null> {
-    const cacheKey = `${this.USER_CACHE_PREFIX}${id}`;
-    const cached = await this.redisClient?.get(cacheKey);
-
-    if (cached) {
-      return JSON.parse(cached) as PublicUserRecord;
+    const cacheKey = this.getCacheKey('profile', id);
+    
+    try {
+      if (this.redisClient) {
+        const cached = await this.redisClient.get(cacheKey);
+        if (cached) {
+          this.logger.debug(`Cache hit: ${cacheKey}`);
+          return JSON.parse(cached) as PublicUserRecord;
+        }
+      }
+    } catch (err) {
+      this.logger.error(`Redis error: ${err.message}`);
     }
 
     const user = await this.findById(id);
 
-    if (user) {
-      await this.redisClient?.set(cacheKey, JSON.stringify(user), {
-        EX: this.USER_CACHE_TTL,
-      });
+    if (user && this.redisClient) {
+      try {
+        await this.redisClient.set(
+          cacheKey, 
+          JSON.stringify(user), 
+          'EX', 
+          USER_CACHE_CONFIG.PROFILE
+        );
+      } catch (err) {
+        this.logger.error(`Redis set error: ${err.message}`);
+      }
     }
 
     return user;
   }
 
+  /**
+   * Invalidate cache using senior-level patterns
+   */
   async invalidateCache(id: string): Promise<void> {
-    await this.redisClient?.del(`${this.USER_CACHE_PREFIX}${id}`);
+    if (!this.redisClient) return;
+    
+    try {
+      const keys = USER_CACHE_CONFIG.INVALIDATION_PATTERNS.PROFILE_UPDATED(id);
+      await this.redisClient.del(...keys);
+      this.logger.log(`Invalidated cache for user: ${id}`);
+    } catch (err) {
+      this.logger.error(`Cache invalidation error: ${err.message}`);
+    }
   }
 
   async updatePreferredTime(
@@ -102,19 +134,26 @@ export class UserService extends GenericService<any, PublicUserRecord> {
     return result;
   }
 
+  /**
+   * Get statistics with caching
+   */
   async getUserStatistics(userId: string): Promise<{
     totalTasks: number;
     completedTasks: number;
     pendingTasks: number;
   }> {
+    const cacheKey = this.getCacheKey('stats', userId);
+
+    // Try cache
+    if (this.redisClient) {
+      const cached = await this.redisClient.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    }
+
     const taskDelegate = (this.prisma as any).task;
 
     if (!taskDelegate) {
-      return {
-        totalTasks: 0,
-        completedTasks: 0,
-        pendingTasks: 0,
-      };
+      return { totalTasks: 0, completedTasks: 0, pendingTasks: 0 };
     }
 
     const baseWhere = {
@@ -128,11 +167,19 @@ export class UserService extends GenericService<any, PublicUserRecord> {
       taskDelegate.count({ where: { ...baseWhere, status: 'pending' } }),
     ]);
 
-    return {
-      totalTasks,
-      completedTasks,
-      pendingTasks,
-    };
+    const stats = { totalTasks, completedTasks, pendingTasks };
+
+    // Set cache
+    if (this.redisClient) {
+      await this.redisClient.set(
+        cacheKey, 
+        JSON.stringify(stats), 
+        'EX', 
+        USER_CACHE_CONFIG.STATISTICS
+      );
+    }
+
+    return stats;
   }
 
   async isSecondaryUser(userId: string): Promise<boolean> {
