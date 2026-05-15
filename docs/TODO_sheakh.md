@@ -3,3 +3,6 @@
 
 Auth guard ar user.decorator.ts e issue ase 
 solve korte hobe 
+
+
+pnpm add cookie-parser && pnpm add -D @types/cookie-parser

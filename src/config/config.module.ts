@@ -26,6 +26,7 @@ import { ConfigModule as NestConfigModule } from '@nestjs/config';
       validate: (config) => {
         // Required variables
         const required = [
+          'DATABASE_URL',
           'MONGODB_URI',
           'JWT_ACCESS_SECRET',
           'JWT_REFRESH_SECRET',
