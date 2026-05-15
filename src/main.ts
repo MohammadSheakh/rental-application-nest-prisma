@@ -113,10 +113,10 @@ async function bootstrap() {
   // Swagger Documentation
   // ────────────────────────────────────────────────────────────────────────
 
-  if (nodeEnv === 'development') {
+  if (nodeEnv === 'development' || nodeEnv === 'production') {
     const config = new DocumentBuilder()
-      .setTitle('Task Management API')
-      .setDescription('Task Management Backend API - NestJS + Mongoose')
+      .setTitle('Apartment Rental Application API')
+      .setDescription('Backend  - NestJS + Postgres + Prisma')
       .setVersion('1.0.0')
       .addBearerAuth({
         type: 'http',
@@ -126,10 +126,10 @@ async function bootstrap() {
       })
       .addTag('Authentication', 'User authentication endpoints')
       .addTag('Users', 'User management endpoints')
-      .addTag('Tasks', 'Task management endpoints')
-      .addTag('Children Business User', 'Parent-child relationship management')
+      // .addTag('Tasks', 'Task management endpoints')
+      // .addTag('Children Business User', 'Parent-child relationship management')
       .addTag('Notifications', 'Notification management endpoints')
-      .addTag('Attachments', 'File upload endpoints')
+      // .addTag('Attachments', 'File upload endpoints')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
