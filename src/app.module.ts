@@ -7,14 +7,14 @@ import { ConfigModule } from './config/config.module';
 import { RedisModule } from './core/database/redis/redis.module';
 import { AuthModule } from './features/authentication/auth.module';
 import { UserModule } from './features/user-management/user.module';
+import { AttachmentModule } from './features/attachments/attachment.module';
 import { PrismaModule } from './core/database/prisma/prisma.module';
 import { BullMQModule } from './core/queue/bullmq.module';
 
 
+
 /**
  * Application Root Module
- *
- * 📚 INDUSTRY STANDARD IMPLEMENTATION
  *
  * Imports and configures all application modules
  *
@@ -54,7 +54,7 @@ import { BullMQModule } from './core/queue/bullmq.module';
     AuthModule,                    // Authentication & Authorization
     UserModule,                    // User management
     
-    // AttachmentModule,              // File attachments
+    AttachmentModule,              // File attachments
     // NotificationModule,            // ⭐ Generic notifications
     // ChattingModule,                // ⭐ Chat messaging (NEW)
 

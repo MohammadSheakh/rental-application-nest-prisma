@@ -1,4 +1,4 @@
-import {
+import{
   Injectable,
   NestInterceptor,
   ExecutionContext,
@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { AttachmentService } from '../../modules/attachment.module/attachment.service';
 
 /**
  * File Upload Processing Interceptor

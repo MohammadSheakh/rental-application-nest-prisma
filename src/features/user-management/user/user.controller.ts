@@ -23,7 +23,7 @@ import { USER_RATE_LIMITS } from './user.constants';
 /**
  * User Controller
  * 
- * 📚 SENIOR LEVEL IMPLEMENTATION
+ * 
  * 
  * Features:
  * ✅ Automatic CRUD via GenericController

@@ -9,7 +9,7 @@ import { UserService } from '../../features/user-management/user/user.service';
 /**
  * Secondary User Guard
  * 
- * 📚 SENIOR LEVEL IMPLEMENTATION
+ * 
  * 
  * Logic from senior reference example:
  * - Business users: Always allowed

@@ -23,7 +23,7 @@ type UserProfileRecord = Prisma.UserProfileGetPayload<{
 /**
  * UserProfile Service
  * 
- * 📚 SENIOR LEVEL IMPLEMENTATION
+ * 
  */
 @Injectable()
 export class UserProfileService extends GenericService<any, UserProfileRecord> {

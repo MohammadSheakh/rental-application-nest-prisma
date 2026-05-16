@@ -1,7 +1,7 @@
 /**
  * User Module Constants
  * 
- * 📚 SENIOR LEVEL IMPLEMENTATION
+ * 
  * 
  * Centralized configuration for cache TTLs, prefixes, and invalidation rules.
  */

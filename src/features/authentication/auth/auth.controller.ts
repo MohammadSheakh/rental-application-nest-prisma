@@ -25,9 +25,7 @@ import { GLOBAL_RATE_LIMITS } from '../../../common/constants/rate-limit.constan
 
 /**
  * Auth Controller
- * 
- * 📚 SENIOR LEVEL IMPLEMENTATION
- * 
+ *
  * Features:
  * ✅ Sliding Window Rate Limiting (Redis)
  * ✅ brute-force protection via auth preset
@@ -48,7 +46,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(SlidingWindowRateLimitGuard)
   @RateLimit(GLOBAL_RATE_LIMITS.auth)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'User login',
     description: 'Authenticate user with email and password',
   })

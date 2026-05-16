@@ -6,7 +6,7 @@ import { QUEUE_NAMES } from './bullmq.constants';
 /**
  * BullMQ Queues Registration
  *
- * 📚 SENIOR LEVEL IMPLEMENTATION
+ * 
  */
 export const BullMQQueues = BullModule.registerQueueAsync(
   {

@@ -18,7 +18,7 @@ import {
 /**
  * Sliding Window Rate Limit Guard
  * 
- * 📚 SENIOR LEVEL IMPLEMENTATION
+ * 
  * 
  * High-performance rate limiting using Redis Sorted Sets
  * Features:

@@ -12,19 +12,29 @@ import {
   UploadedFiles,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { 
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
-import { GenericController } from '../../../common/generic/generic.controller';
 import { AttachmentService } from './attachment.service';
-import { Attachment, AttachmentDocument } from './attachment.schema';
-import { CreateAttachmentDto, UpdateAttachmentDto, GetAttachmentsByEntityDto } from './dto/attachment.dto';
-import { AuthGuard } from '../../../common/guards/auth.guard';
-import { UserPayload } from '../../../common/guards/auth.guard';
-import { User } from '../../../common/decorators/user.decorator';
-import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
-import { UseFileUploadPipeline } from '../../../common/decorators/use-file-upload-pipeline.decorator';
+import {
+  CreateAttachmentDto,
+  GetAttachmentsByEntityDto,
+} from './dto/attachment.dto';
+
+import { AuthGuard } from '../../common/guards/auth.guard';
+import { UserPayload } from '../../common/guards/auth.guard';
+import { User } from '../../common/decorators/user.decorator';
+
+import { TransformResponseInterceptor } from '../../common/interceptors/transform-response.interceptor';
+import { UseFileUploadPipeline } from '../../common/decorators/use-file-upload-pipeline.decorator';
+import { GenericController } from 'src/common/generic/generic.controller';
 
 /**
  * Attachment Controller

@@ -1,11 +1,7 @@
-import { Module, Inject } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-
+import { Module } from '@nestjs/common';
 import { AttachmentController } from './attachment.controller';
 import { AttachmentService } from './attachment.service';
-import { Attachment, AttachmentSchema } from './attachment.schema';
-
-import { RedisModule } from '../../../helpers/redis/redis.module';
+import { RedisModule } from '../../core/database/redis/redis.module';
 import { CloudinaryStrategy } from './strategies/cloudinary.strategy';
 import { S3Strategy } from './strategies/s3.strategy';
 import { FileUploadStrategyFactory } from './strategies/file-upload.strategy.factory';
@@ -32,12 +28,7 @@ import { IFileUploadStrategy } from './strategies/file-upload.strategy.interface
  */
 @Module({
   imports: [
-    // MongoDB - Attachment collection
-    MongooseModule.forFeature([{ 
-      name: Attachment.name, 
-      schema: AttachmentSchema 
-    }]),
-
+    
     // Redis Module (for caching)
     RedisModule,
   ],

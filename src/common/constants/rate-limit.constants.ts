@@ -1,8 +1,6 @@
 /**
  * Global Rate Limit Presets
- * 
- * 📚 SENIOR LEVEL IMPLEMENTATION
- * 
+ *
  * Centralized rate limit configurations matching the express-example logic.
  * These are used by the SlidingWindowRateLimitGuard.
  */
