@@ -1,98 +1,62 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🏢 Alora - Apartment Management Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> Scalable NestJS backend for property management with 40+ endpoints and real-time features
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🛠️ Tech Stack
 
-## Description
+![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
+![Stripe](https://img.shields.io/badge/Stripe-626CD9?style=for-the-badge&logo=stripe&logoColor=white)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 🔧 Backend Highlights
 
-## Project setup
+✅ **API Design**
+- RESTful architecture with DTO validation (class-validator)
+- 40+ endpoints across 8 core modules (Auth, Users, Apartments, Units, Billing, Rentals, Maintenance, Wallet)
+- Swagger/OpenAPI documentation for all routes
 
-```bash
-$ pnpm install
-```
+✅ **Database & ORM**
+- MongoDB with Mongoose schemas for complex nested documents
+- Prisma-like query patterns for aggregation pipelines (revenue reports, occupancy rates)
+- Transaction support for atomic operations (payment + subscription update)
 
-## Compile and run the project
+✅ **Payment & Webhooks**
+- Stripe Checkout Sessions for subscription creation
+- Idempotent webhook handlers prevent race conditions during retries
+- Secure signature verification (`stripe.webhooks.constructEvent()`)
+- Failed payment alerts via BullMQ job queues
 
-```bash
-# development
-$ pnpm run start
+✅ **Security**
+- JWT authentication with refresh token rotation
+- Role-Based Access Control (RBAC) with 5+ custom guards
+- Password hashing (bcrypt), email verification, and rate limiting
+- File upload security with signed URLs (Multer + S3/Middleware)
 
-# watch mode
-$ pnpm run start:dev
+✅ **Performance**
+- Redis caching for frequently accessed data (apartment listings, user profiles)
+- Nginx reverse proxy configuration for production deployment
+- Environment-based config management (@nestjs/config)
 
-# production mode
-$ pnpm run start:prod
-```
+## 📂 Core Modules
 
-## Run tests
+| Module | Purpose | Key Endpoints |
+| :--- | :--- | :--- |
+| **Auth** | JWT, refresh tokens, OAuth | `POST /auth/register`, `/login`, `/refresh` |
+| **Apartments** | CRUD, owner assignment, facilities | `GET /apartments`, `POST /apartments/:id/units` |
+| **Billing** | Standard/Custom/Personalized bills | `POST /bills/generate`, `/pay`, `/invoices` |
+| **Rentals** | Application workflow, lease terms | `POST /applications`, `/approve`, `/occupy` |
+| **Maintenance** | Ticket creation, crew dispatch | `POST /tickets`, `/assign`, `/resolve` |
+| **Wallet** | Balance tracking, transaction history | `GET /wallet/balance`, `POST /topup` |
 
-```bash
-# unit tests
-$ pnpm run test
+## 🎯 Interview Talking Points
 
-# e2e tests
-$ pnpm run test:e2e
+> When asked about challenges faced in this project:
 
-# test coverage
-$ pnpm run test:cov
-```
+1. *"I handled Stripe webhook race conditions by implementing idempotency keys on transaction records."*
+2. *"Designed composite indexes on MongoDB collections to optimize apartment filtering by location/status."*
+3. *"Built modular services so Billing can scale independently if we add more payment gateways later."*
+4. *"Implemented document access policies so renters cannot view other tenants' leases or IDs."*
+5. *"Created notification service using BullMQ for async email/SMS alerts after payment confirmation."*
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+🔗 **[View Documentation](link)** | 🔗 **[Live API Status](link)**
