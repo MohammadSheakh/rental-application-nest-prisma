@@ -49,14 +49,5 @@
 | **Maintenance** | Ticket creation, crew dispatch | `POST /tickets`, `/assign`, `/resolve` |
 | **Wallet** | Balance tracking, transaction history | `GET /wallet/balance`, `POST /topup` |
 
-## 🎯 Interview Talking Points
-
-> When asked about challenges faced in this project:
-
-1. *"I handled Stripe webhook race conditions by implementing idempotency keys on transaction records."*
-2. *"Designed composite indexes on MongoDB collections to optimize apartment filtering by location/status."*
-3. *"Built modular services so Billing can scale independently if we add more payment gateways later."*
-4. *"Implemented document access policies so renters cannot view other tenants' leases or IDs."*
-5. *"Created notification service using BullMQ for async email/SMS alerts after payment confirmation."*
 
 🔗 **[View Documentation](link)** | 🔗 **[Live API Status](link)**
