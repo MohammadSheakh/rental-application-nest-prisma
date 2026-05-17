@@ -6,7 +6,6 @@ import { QUEUE_NAMES } from './bullmq.constants';
 /**
  * BullMQ Queues Registration
  *
- * 
  */
 export const BullMQQueues = BullModule.registerQueueAsync(
   {
@@ -36,19 +35,6 @@ export const BullMQQueues = BullModule.registerQueueAsync(
     inject: [ConfigService],
   },
   {
-    name: QUEUE_NAMES.TASK_REMINDERS,
-    useFactory: (configService: ConfigService) => ({
-      connection: getRedisOptions(configService),
-      defaultJobOptions: {
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 2000 },
-        removeOnComplete: { count: 100 },
-        removeOnFail: { count: 500 },
-      },
-    }),
-    inject: [ConfigService],
-  },
-  {
     name: QUEUE_NAMES.NOTIFY_PARTICIPANTS,
     useFactory: (configService: ConfigService) => ({
       connection: getRedisOptions(configService),
@@ -62,12 +48,12 @@ export const BullMQQueues = BullModule.registerQueueAsync(
     inject: [ConfigService],
   },
   {
-    name: QUEUE_NAMES.PREFERRED_TIME,
+    name: QUEUE_NAMES.EMAIL,
     useFactory: (configService: ConfigService) => ({
       connection: getRedisOptions(configService),
       defaultJobOptions: {
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 2000 },
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 3000 },
         removeOnComplete: { count: 100 },
         removeOnFail: { count: 500 },
       },

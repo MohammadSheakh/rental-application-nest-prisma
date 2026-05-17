@@ -3,22 +3,13 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { RedisModule } from 'src/core/database/redis/redis.module';
 import { PrismaModule } from 'src/core/database/prisma/prisma.module';
-// import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { OtpService } from './otp/otp.service';
 import { EmailService } from './email/email.service';
 import { OAuthVerificationService } from './oauth/oauth-verification.service';
-
-// import { AuthController } from './auth.controller';
-// import { AuthService } from './auth.service';
-// import { OtpService } from '../otp/otp.service';
-// import { EmailService } from './email/email.service';
-// import { OAuthVerificationService } from './oauth/oauth-verification.service';
-
-// import { User, UserSchema } from '../../user.module/user/user.schema';
-// import { RedisModule } from '../../../helpers/redis/redis.module';
+import { EmailProcessor } from 'src/core/queue/processors/email.processor';
 
 /**
  * Auth Module
@@ -54,9 +45,6 @@ import { OAuthVerificationService } from './oauth/oauth-verification.service';
     // Passport Module
     PassportModule,
 
-    // MongoDB - User collection
-    // MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
-
     // Redis Module (for OTP and token blacklist)
     RedisModule,
     PrismaModule,
@@ -75,6 +63,7 @@ import { OAuthVerificationService } from './oauth/oauth-verification.service';
     OtpService,
     EmailService,
     OAuthVerificationService,
+    EmailProcessor,
   ],
   exports: [AuthService, JwtModule],
 })

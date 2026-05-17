@@ -1,4 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { QUEUE_NAMES } from 'src/core/queue/bullmq.constants';
 
 /**
  * Email Service
@@ -24,24 +27,32 @@ import { Injectable, Logger } from '@nestjs/common';
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
+  constructor(
+    @InjectQueue(QUEUE_NAMES.EMAIL) private emailQueue: Queue,
+  ) {}
+
   /**
-   * Send OTP Email
+   * Send OTP Email (Queued)
    *
    * @param email - Recipient email address
    * @param otp - OTP code
    * @param type - OTP type (verify or reset)
    */
   async sendOtpEmail(email: string, otp: string, type: 'verify' | 'reset'): Promise<void> {
+    await this.emailQueue.add('send-otp-email', { email, otp, type });
+    this.logger.log(`📧 OTP email queued for ${email}`);
+  }
+
+  /**
+   * Send OTP Email Now
+   */
+  async sendOtpEmailNow(email: string, otp: string, type: 'verify' | 'reset'): Promise<void> {
     const subject = type === 'verify'
       ? 'Verify Your Email - Task Management'
       : 'Password Reset - Task Management';
 
-    const message = type === 'verify'
-      ? `Your email verification OTP is: ${otp}`
-      : `Your password reset OTP is: ${otp}`;
-
     // Development: Log to console
-    this.logger.log(`📧 Email sent to ${email}:`);
+    this.logger.log(`📧 [PROCESSOR] Sending OTP email to ${email}:`);
     this.logger.log(`   Subject: ${subject}`);
     this.logger.log(`   OTP: ${otp}`);
     this.logger.log(`   Type: ${type}`);
@@ -55,13 +66,21 @@ export class EmailService {
   }
 
   /**
-   * Send Welcome Email
+   * Send Welcome Email (Queued)
    *
    * @param email - Recipient email address
    * @param name - User name
    */
   async sendWelcomeEmail(email: string, name: string): Promise<void> {
-    this.logger.log(`📧 Welcome email sent to ${email}:`);
+    await this.emailQueue.add('send-welcome-email', { email, name });
+    this.logger.log(`📧 Welcome email queued for ${email}`);
+  }
+
+  /**
+   * Send Welcome Email Now
+   */
+  async sendWelcomeEmailNow(email: string, name: string): Promise<void> {
+    this.logger.log(`📧 [PROCESSOR] Sending welcome email to ${email}:`);
     this.logger.log(`   Name: ${name}`);
     this.logger.log(`   Subject: Welcome to Task Management!`);
 
@@ -74,12 +93,20 @@ export class EmailService {
   }
 
   /**
-   * Send Password Reset Confirmation
+   * Send Password Reset Confirmation (Queued)
    *
    * @param email - Recipient email address
    */
   async sendPasswordResetConfirmation(email: string): Promise<void> {
-    this.logger.log(`📧 Password reset confirmation sent to ${email}`);
+    await this.emailQueue.add('send-password-reset-confirmation', { email });
+    this.logger.log(`📧 Password reset confirmation queued for ${email}`);
+  }
+
+  /**
+   * Send Password Reset Confirmation Now
+   */
+  async sendPasswordResetConfirmationNow(email: string): Promise<void> {
+    this.logger.log(`📧 [PROCESSOR] Sending password reset confirmation to ${email}`);
 
     // Production: Send actual email
     // await this.sendEmail({
@@ -90,13 +117,25 @@ export class EmailService {
   }
 
   /**
-   * Send Task Notification Email
+   * Send Task Notification Email (Queued)
    *
    * @param email - Recipient email address
    * @param taskTitle - Task title
    * @param type - Notification type (assigned, completed, etc.)
    */
   async sendTaskNotificationEmail(
+    email: string,
+    taskTitle: string,
+    type: 'assigned' | 'completed' | 'due_soon' | 'overdue',
+  ): Promise<void> {
+    await this.emailQueue.add('send-task-notification', { email, taskTitle, type });
+    this.logger.log(`📧 Task notification queued for ${email}`);
+  }
+
+  /**
+   * Send Task Notification Email Now
+   */
+  async sendTaskNotificationEmailNow(
     email: string,
     taskTitle: string,
     type: 'assigned' | 'completed' | 'due_soon' | 'overdue',
@@ -108,7 +147,7 @@ export class EmailService {
       overdue: 'Task Overdue',
     };
 
-    this.logger.log(`📧 Task notification sent to ${email}:`);
+    this.logger.log(`📧 [PROCESSOR] Sending task notification to ${email}:`);
     this.logger.log(`   Task: ${taskTitle}`);
     this.logger.log(`   Type: ${type}`);
     this.logger.log(`   Subject: ${subjects[type]}`);
@@ -146,7 +185,7 @@ export class EmailService {
     // await sgMail.send(msg);
 
     // For now, log to console
-    this.logger.debug(`Email queued: ${options.to} - ${options.subject}`);
+    this.logger.debug(`Email actually sending: ${options.to} - ${options.subject}`);
   }
 
   /**
