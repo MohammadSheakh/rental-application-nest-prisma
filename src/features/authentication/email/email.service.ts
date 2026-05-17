@@ -27,9 +27,7 @@ import { QUEUE_NAMES } from 'src/core/queue/bullmq.constants';
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
-  constructor(
-    @InjectQueue(QUEUE_NAMES.EMAIL) private emailQueue: Queue,
-  ) {}
+  constructor(@InjectQueue(QUEUE_NAMES.EMAIL) private emailQueue: Queue) {}
 
   /**
    * Send OTP Email (Queued)
@@ -38,7 +36,11 @@ export class EmailService {
    * @param otp - OTP code
    * @param type - OTP type (verify or reset)
    */
-  async sendOtpEmail(email: string, otp: string, type: 'verify' | 'reset'): Promise<void> {
+  async sendOtpEmail(
+    email: string,
+    otp: string,
+    type: 'verify' | 'reset',
+  ): Promise<void> {
     await this.emailQueue.add('send-otp-email', { email, otp, type });
     this.logger.log(`📧 OTP email queued for ${email}`);
   }
@@ -46,7 +48,11 @@ export class EmailService {
   /**
    * Send OTP Email Now
    */
-  async sendOtpEmailNow(email: string, otp: string, type: 'verify' | 'reset'): Promise<void> {
+  async sendOtpEmailNow(
+    email: string,
+    otp: string,
+    type: 'verify' | 'reset',
+  ): Promise<void> {
     const subject = type === 'verify'
       ? 'Verify Your Email - Task Management'
       : 'Password Reset - Task Management';
@@ -116,49 +122,7 @@ export class EmailService {
     // });
   }
 
-  /**
-   * Send Task Notification Email (Queued)
-   *
-   * @param email - Recipient email address
-   * @param taskTitle - Task title
-   * @param type - Notification type (assigned, completed, etc.)
-   */
-  async sendTaskNotificationEmail(
-    email: string,
-    taskTitle: string,
-    type: 'assigned' | 'completed' | 'due_soon' | 'overdue',
-  ): Promise<void> {
-    await this.emailQueue.add('send-task-notification', { email, taskTitle, type });
-    this.logger.log(`📧 Task notification queued for ${email}`);
-  }
-
-  /**
-   * Send Task Notification Email Now
-   */
-  async sendTaskNotificationEmailNow(
-    email: string,
-    taskTitle: string,
-    type: 'assigned' | 'completed' | 'due_soon' | 'overdue',
-  ): Promise<void> {
-    const subjects = {
-      assigned: 'New Task Assigned',
-      completed: 'Task Completed',
-      due_soon: 'Task Due Soon',
-      overdue: 'Task Overdue',
-    };
-
-    this.logger.log(`📧 [PROCESSOR] Sending task notification to ${email}:`);
-    this.logger.log(`   Task: ${taskTitle}`);
-    this.logger.log(`   Type: ${type}`);
-    this.logger.log(`   Subject: ${subjects[type]}`);
-
-    // Production: Send actual email
-    // await this.sendEmail({
-    //   to: email,
-    //   subject: subjects[type],
-    //   html: this.getTaskNotificationTemplate(taskTitle, type),
-    // });
-  }
+  
 
   /**
    * Generic Send Email Method
@@ -301,57 +265,6 @@ export class EmailService {
               <p>Your password has been successfully reset.</p>
               <p>If you didn't request this change, please contact our support team immediately.</p>
               <p>For security reasons, please use a strong password and don't share it with anyone.</p>
-            </div>
-            <div class="footer">
-              <p>&copy; 2026 Task Management. All rights reserved.</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-  }
-
-  /**
-   * Task Notification Template
-   */
-  private getTaskNotificationTemplate(taskTitle: string, type: string): string {
-    const colors = {
-      assigned: '#4F46E5',
-      completed: '#10B981',
-      due_soon: '#F59E0B',
-      overdue: '#EF4444',
-    };
-
-    const messages = {
-      assigned: 'A new task has been assigned to you',
-      completed: 'A task has been marked as completed',
-      due_soon: 'A task is due soon',
-      overdue: 'A task is overdue',
-    };
-
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: ${colors[type]}; color: white; padding: 30px; text-align: center; }
-            .content { background: #f9f9f9; padding: 30px; }
-            .task-title { font-size: 20px; font-weight: bold; color: #333; margin: 20px 0; }
-            .button { display: inline-block; background: ${colors[type]}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin-top: 20px; }
-            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>${messages[type]}</h1>
-            </div>
-            <div class="content">
-              <div class="task-title">${taskTitle}</div>
-              <p>Log in to your dashboard to view all your tasks and updates.</p>
-              <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/dashboard" class="button">View Dashboard</a>
             </div>
             <div class="footer">
               <p>&copy; 2026 Task Management. All rights reserved.</p>

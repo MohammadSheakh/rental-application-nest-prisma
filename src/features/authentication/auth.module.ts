@@ -13,20 +13,8 @@ import { EmailProcessor } from 'src/core/queue/processors/email.processor';
 
 /**
  * Auth Module
- * 
- * 📚 EXPRESS → NESTJS TRANSITION
- * 
- * Express Pattern:
- * - Manual middleware registration
- * - Direct service imports
- * - No module encapsulation
- * 
- * NestJS Pattern:
- * - @Module() decorator
- * - Explicit imports/exports
- * - Dependency injection
- * - Clear boundaries
- * 
+ *
+ *
  * Key Features:
  * ✅ JWT authentication
  * ✅ Local (email/password) authentication
