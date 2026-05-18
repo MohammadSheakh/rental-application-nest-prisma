@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module, OnModuleInit, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BullModule } from '@nestjs/bullmq';
 
@@ -7,52 +7,14 @@ import { NotificationService } from './notification.service';
 import { Notification, NotificationSchema } from './notification.schema';
 import { TaskReminderModule } from './taskReminder/taskReminder.module';
 
-import { RedisModule } from '../../helpers/redis/redis.module';
+import { RedisModule } from '../../core/database/redis/redis.module';
 import { SocketModule } from '../socket.gateway/socket.module';
-import { BULLMQ_NOTIFICATION_QUEUE, QUEUE_NAMES } from '../../helpers/bullmq/bullmq.constants';
-import { setNotificationService } from '../../helpers/notification.helper';
+import { BULLMQ_NOTIFICATION_QUEUE, QUEUE_NAMES } from '../../core/queue/bullmq.constants';
 
 /**
  * Notification Module
  *
  * 📬 GENERIC NOTIFICATION SYSTEM
- *
- * Features:
- * - Generic notifications (not coupled to any specific module)
- * - Real-time Socket.IO delivery
- * - Async BullMQ processing
- * - Redis caching for unread counts
- * - Broadcast to users/roles
- * - Global helper for use from anywhere
- *
- * Usage from other modules:
- * ```typescript
- * // Method 1: Inject NotificationService
- * constructor(private notificationService: NotificationService) {}
- *
- * await this.notificationService.sendNotification({
- *   title: 'New Task Assigned',
- *   senderId: userId,
- *   receiverId: assigneeId,
- *   type: NotificationType.ASSIGNMENT,
- *   entityType: 'task',
- *   entityId: taskId,
- * });
- *
- * // Method 2: Use global helper (from anywhere)
- * import { enqueueNotification } from '../../helpers/notification.helper';
- *
- * await enqueueNotification({
- *   title: 'New Blog Published',
- *   senderId: userId,
- *   receiverId: followerId,
- *   type: NotificationType.CUSTOM,
- *   entityType: 'blog',
- *   entityId: blogId,
- * });
- * ```
- *
- * Compatible with Express.js notification.module.js
  */
 @Module({
   imports: [
@@ -66,7 +28,7 @@ import { setNotificationService } from '../../helpers/notification.helper';
     RedisModule,
 
     // Socket Module (for real-time notifications)
-    SocketModule,
+    forwardRef(() => SocketModule),
 
     // BullMQ Module (for async processing)
     BullModule.registerQueue({
@@ -103,18 +65,7 @@ import { setNotificationService } from '../../helpers/notification.helper';
   ],
   exports: [NotificationService, TaskReminderModule],
 })
-export class NotificationModule implements OnModuleInit {
+export class NotificationModule {
   constructor(private notificationService: NotificationService) {}
-
-  /**
-   * Initialize notification helper on module init
-   *
-   * This sets the notification service instance so the helper
-   * functions can be used from anywhere in the app
-   */
-  onModuleInit() {
-    setNotificationService(this.notificationService);
-    console.log('✅ Notification Module initialized - Global helper ready to use');
-    console.log('📬 You can now use: import { enqueueNotification } from "./helpers/notification.helper"');
-  }
 }
+

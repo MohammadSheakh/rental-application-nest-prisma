@@ -1,7 +1,8 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
-import { REDIS_CLIENT } from '../../../helpers/redis/redis.module';
+import { REDIS_CLIENT } from '../../../core/database/redis/redis.module';
+import { PrismaService } from '../../../core/database/prisma/prisma.service';
 
 /**
  * Socket Room Service
@@ -36,7 +37,10 @@ export class SocketRoomService {
     ACTIVITY_FEED: 'activity:feed:',
   };
 
-  constructor(@Inject(REDIS_CLIENT) private redisClient: Redis) {}
+  constructor(
+    @Inject(REDIS_CLIENT) private redisClient: Redis,
+    private prisma: PrismaService,
+  ) {}
 
   // =============================================
   // Conversation Room Management
@@ -212,19 +216,37 @@ export class SocketRoomService {
   /**
    * Auto-join Family Room
    * 
-   * Based on childrenBusinessUser relationship
+   * Based on accountCreatorId relationship (family structure)
    * Every user (parent or child) automatically joins their family room
    */
-  async autoJoinFamilyRoom(socket: any, userId: string, userProfile: any): Promise<void> {
+  async autoJoinFamilyRoom(socket: any, userId: string): Promise<void> {
     try {
-      // TODO: Get family room ID from childrenBusinessUser service
-      // For now, use businessUserId as family room ID
-      const familyRoomId = userProfile.businessUserId || userId;
+      // Find user and their account creator to determine family room
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, role: true, accountCreatorId: true },
+      });
 
-      this.joinGroupRoom(userId, familyRoomId);
-      socket.join(familyRoomId);
+      if (!user) return;
 
-      this.logger.log(`✅ User ${userId} auto-joined family room ${familyRoomId}`);
+      let familyRoomId: string | null = null;
+
+      if (user.role === 'child' && user.accountCreatorId) {
+        // User is a child -> join parent's family room
+        familyRoomId = user.accountCreatorId;
+        this.logger.log(`👨‍👩‍👧‍👦 User ${userId} joining family room ${familyRoomId} (as child)`);
+      } else if (user.role === 'business') {
+        // User is a business user (parent) -> join their own family room
+        familyRoomId = userId;
+        this.logger.log(`👨‍👩‍👧‍👦 User ${userId} joining family room ${familyRoomId} (as business user)`);
+      }
+
+      // Join family room if found
+      if (familyRoomId) {
+        await this.joinGroupRoom(userId, familyRoomId);
+        socket.join(familyRoomId);
+        this.logger.log(`✅ User ${userId} auto-joined family room ${familyRoomId}`);
+      }
     } catch (error) {
       this.logger.error(`❌ Error auto-joining family room: ${error.message}`);
     }

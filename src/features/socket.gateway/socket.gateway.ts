@@ -9,42 +9,20 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger, UseGuards, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { Redis } from 'ioredis';
 
 import { SocketAuthService } from './socket-auth.service';
 import { SocketRoomService } from './socket-room.service';
 import { WsJwtGuard } from './guards/ws-jwt.guard';
+import { REDIS_PUB_CLIENT, REDIS_SUB_CLIENT } from '../../core/database/redis/redis.constants';
 
 /**
  * Socket.IO Gateway
  * 
  * 📚 REAL-TIME NOTIFICATION & CHAT GATEWAY
- * 
- * Features:
- * - JWT Authentication
- * - Room Management (chat, tasks, family)
- * - Online User Tracking
- * - Real-time Notifications
- * - Redis Adapter for Multi-Worker
- * 
- * Events (Client → Server):
- * - 'join' - Join conversation room
- * - 'leave' - Leave conversation room
- * - 'join-task' - Join task room
- * - 'leave-task' - Leave task room
- * - 'send-message' - Send chat message
- * - 'get-online-users' - Get related online users
- * 
- * Events (Server → Client):
- * - 'notification::userId' - New notification
- * - 'notification:unread-count::userId' - Unread count update
- * - 'user-joined-chat' - User joined conversation
- * - 'user-left-chat' - User left conversation
- * - 'new-message-received' - New message received
- * - 'user-joined-task' - User joined task
- * - 'user-left-task' - User left task
- * - 'task-status-updated' - Task status changed
  */
 @WebSocketGateway({
   cors: {
@@ -65,6 +43,8 @@ export class SocketGateway
     private jwtService: JwtService,
     private socketAuthService: SocketAuthService,
     private socketRoomService: SocketRoomService,
+    @Inject(REDIS_PUB_CLIENT) private redisPubClient: Redis,
+    @Inject(REDIS_SUB_CLIENT) private redisSubClient: Redis,
   ) {}
 
   /**
@@ -74,9 +54,13 @@ export class SocketGateway
     this.logger.log('✅ Socket.IO Gateway initialized');
     
     // Attach Redis adapter for multi-worker support
-    // TODO: Import createAdapter from @socket.io/redis-adapter
-    // const adapter = createAdapter(redisPubClient, redisSubClient);
-    // server.adapter(adapter);
+    try {
+      const adapter = createAdapter(this.redisPubClient, this.redisSubClient);
+      server.adapter(adapter);
+      this.logger.log('✅ Redis adapter attached to Socket.IO server');
+    } catch (error) {
+      this.logger.error(`❌ Failed to attach Redis adapter: ${error.message}`);
+    }
   }
 
   /**
@@ -121,6 +105,9 @@ export class SocketGateway
       // Auto-join family room (if applicable)
       await this.socketRoomService.autoJoinFamilyRoom(client, user.userId);
 
+      // Notify related users about online status
+      await this.notifyRelatedUsersOnlineStatus(user.userId, true);
+
       // Emit connection success
       client.emit('connected', {
         success: true,
@@ -148,6 +135,30 @@ export class SocketGateway
 
       // Handle user disconnection in Redis
       await this.socketAuthService.handleUserDisconnection(client, userId);
+
+      // Notify related users about offline status
+      await this.notifyRelatedUsersOnlineStatus(userId, false);
+    }
+  }
+
+  /**
+   * Notify Related Users about Online Status
+   */
+  private async notifyRelatedUsersOnlineStatus(userId: string, isOnline: boolean) {
+    try {
+      const relatedUsers = await this.socketAuthService.getRelatedOnlineUsers(userId);
+
+      for (const relatedUserId of relatedUsers) {
+        // Don't notify self
+        if (relatedUserId === userId) continue;
+
+        this.server.to(relatedUserId).emit(`related-user-online-status::${relatedUserId}`, {
+          userId,
+          isOnline,
+        });
+      }
+    } catch (error) {
+      this.logger.error(`❌ Failed to notify related users: ${error.message}`);
     }
   }
 

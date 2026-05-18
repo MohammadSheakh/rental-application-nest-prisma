@@ -1,9 +1,13 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import { Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { Redis } from 'ioredis';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
 
-import { REDIS_CLIENT } from '../../../helpers/redis/redis.module';
+import { REDIS_CLIENT } from '../../../core/database/redis/redis.constants';
+import { PrismaService } from '../../../core/database/prisma/prisma.service';
+import { ConversationParticipents, ConversationParticipentsDocument } from '../../chatting.module/conversationParticipents/conversationParticipents.schema';
 
 interface UserConnectionInfo {
   socketId: string;
@@ -16,17 +20,9 @@ interface UserConnectionInfo {
  * Socket Auth Service
  * 
  * 📚 SOCKET.IO AUTHENTICATION & USER TRACKING
- * 
- * Features:
- * - JWT token validation for Socket.IO
- * - Online user tracking in Redis
- * - User reconnection handling
- * - Related online users fetching
- * 
- * Compatible with Express.js redisStateManagerForSocketV2.ts
  */
 @Injectable()
-export class SocketAuthService {
+export class SocketAuthService implements OnModuleInit {
   private readonly logger = new Logger(SocketAuthService.name);
   private readonly KEYS = {
     ONLINE_USERS: 'chat:online_users',
@@ -38,15 +34,18 @@ export class SocketAuthService {
   constructor(
     private jwtService: JwtService,
     @Inject(REDIS_CLIENT) private redisClient: Redis,
+    private prisma: PrismaService,
+    @InjectModel(ConversationParticipents.name) private conversationParticipentsModel: Model<ConversationParticipentsDocument>,
   ) {}
+
+  onModuleInit() {
+    this.startCleanupJob();
+  }
 
   /**
    * Authenticate Socket Connection
-   * 
-   * @param socket - Socket.IO client
-   * @returns User payload if valid
    */
-  async authenticateSocket(socket: Socket): Promise<{ userId: string; role: string } | null> {
+  async authenticateSocket(socket: Socket): Promise<{ userId: string; role: string; name: string } | null> {
     try {
       const token = socket.handshake.auth.token || socket.handshake.headers.token as string;
 
@@ -65,9 +64,21 @@ export class SocketAuthService {
         return null;
       }
 
+      // Fetch user profile from Prisma for full info
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.userId },
+        select: { id: true, role: true, name: true },
+      });
+
+      if (!user) {
+        this.logger.warn(`❌ Socket authentication failed: User ${payload.userId} not found`);
+        return null;
+      }
+
       return {
-        userId: payload.userId,
-        role: payload.role,
+        userId: user.id,
+        role: user.role,
+        name: user.name,
       };
     } catch (error) {
       this.logger.error(`❌ Socket authentication error: ${error.message}`);
@@ -77,9 +88,6 @@ export class SocketAuthService {
 
   /**
    * Handle User Connection
-   * 
-   * @param socket - Socket.IO client
-   * @param user - User payload
    */
   async handleUserConnection(socket: Socket, user: { userId: string; role: string }): Promise<string | null> {
     const userId = user.userId;
@@ -111,9 +119,6 @@ export class SocketAuthService {
 
   /**
    * Handle User Disconnection
-   * 
-   * @param socket - Socket.IO client
-   * @param userId - User ID
    */
   async handleUserDisconnection(socket: Socket, userId: string): Promise<void> {
     const socketId = socket.id;
@@ -229,16 +234,49 @@ export class SocketAuthService {
   /**
    * Get Related Online Users
    * 
-   * For now, returns all online users
-   * TODO: Integrate with conversation service to get only related users
+   * Returns online users that the current user is related to (family or conversations)
    */
   async getRelatedOnlineUsers(userId: string): Promise<string[]> {
     try {
       const allOnlineUsers = await this.getAllOnlineUsers();
+      if (allOnlineUsers.length === 0) return [];
 
-      // TODO: Filter to only related users (conversations, family, etc.)
-      // For now, return all online users
-      return allOnlineUsers;
+      const relatedUserIds = new Set<string>();
+
+      // 1. Get family-related users from Prisma
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, accountCreatorId: true, childAccounts: { select: { id: true } } },
+      });
+
+      if (user) {
+        if (user.accountCreatorId) relatedUserIds.add(user.accountCreatorId);
+        user.childAccounts.forEach(child => relatedUserIds.add(child.id));
+      }
+
+      // 2. Get conversation-related users from Mongoose
+      const userParticipations = await this.conversationParticipentsModel.find({
+        userId: new Types.ObjectId(userId),
+        isDeleted: false,
+      }).select('conversationId');
+
+      if (userParticipations.length > 0) {
+        const conversationIds = userParticipations.map(p => p.conversationId);
+        const otherParticipants = await this.conversationParticipentsModel.find({
+          conversationId: { $in: conversationIds },
+          userId: { $ne: new Types.ObjectId(userId) },
+          isDeleted: false,
+        }).select('userId');
+
+        otherParticipants.forEach(p => relatedUserIds.add(p.userId.toString()));
+      }
+
+      // Filter only those who are online
+      const relatedOnlineUsers = allOnlineUsers.filter(onlineId => 
+        relatedUserIds.has(onlineId) || onlineId === userId
+      );
+
+      return relatedOnlineUsers;
     } catch (error) {
       this.logger.error(`❌ Error getting related online users: ${error.message}`);
       return [];
@@ -261,5 +299,28 @@ export class SocketAuthService {
       onlineUsers: await this.getAllOnlineUsers(),
       timestamp: Date.now(),
     };
+  }
+
+  /**
+   * Start Cleanup Job
+   */
+  private startCleanupJob() {
+    setInterval(async () => {
+      try {
+        const onlineUsers = await this.getAllOnlineUsers();
+        const staleThreshold = Date.now() - 5 * 60 * 1000; // 5 minutes
+
+        for (const userId of onlineUsers) {
+          const connectionInfo = await this.getUserConnectionInfo(userId);
+
+          if (connectionInfo && connectionInfo.connectedAt < staleThreshold) {
+            this.logger.warn(`🧹 Cleaning up stale connection for user ${userId}`);
+            await this.removeOnlineUser(userId, connectionInfo.socketId);
+          }
+        }
+      } catch (error) {
+        this.logger.error(`❌ Error in cleanup job: ${error.message}`);
+      }
+    }, 5 * 60 * 1000); // Every 5 minutes
   }
 }

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BullModule } from '@nestjs/bullmq';
 
@@ -15,36 +15,18 @@ import { Message, MessageSchema } from './message/message.schema';
 import { MessageReadStatusService } from './messageReadStatus/messageReadStatus.service';
 import { MessageReadStatus, MessageReadStatusSchema } from './messageReadStatus/messageReadStatus.schema';
 
-import { SocketModule } from '../../socket.gateway/socket.module';
-import { RedisModule } from '../../../helpers/redis/redis.module';
+import { SocketModule } from '../socket.gateway/socket.module';
+import { RedisModule } from '../../core/database/redis/redis.module';
 import {
   BULLMQ_CONVERSATION_LAST_MESSAGE_QUEUE,
   BULLMQ_NOTIFY_PARTICIPANTS_QUEUE,
   QUEUE_NAMES,
-} from '../../../helpers/bullmq/bullmq.constants';
+} from '../../core/queue/bullmq.constants';
 
 /**
  * Chatting Module
  *
  * 📚 CHAT MESSAGING MODULE
- *
- * Features:
- * - Real-time messaging
- * - Direct & Group conversations
- * - Participant management
- * - Unread message tracking
- * - Read receipts
- * - Socket.IO integration
- * - Redis state management
- * - BullMQ async processing
- *
- * Sub-modules:
- * - Conversation (parent)
- * - ConversationParticipents
- * - Message
- * - MessageReadStatus
- *
- * Compatible with Express.js chatting.module/
  */
 @Module({
   imports: [
@@ -72,7 +54,7 @@ import {
     RedisModule,
 
     // Socket Module (for real-time updates)
-    SocketModule,
+    forwardRef(() => SocketModule),
 
     // BullMQ Queues
     BullModule.registerQueue(

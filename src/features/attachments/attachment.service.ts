@@ -5,7 +5,7 @@ import { Redis } from 'ioredis';
 
 import { GenericService } from '../../../common/generic/generic.service';
 import { Attachment, AttachmentDocument, AttachmentType } from './attachment.schema';
-import { REDIS_CLIENT } from '../../../helpers/redis/redis.module';
+import { REDIS_CLIENT } from '../../core/database/redis/redis.constants';
 import { IFileUploadStrategy } from './strategies/file-upload.strategy.interface';
 
 /**

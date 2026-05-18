@@ -8,7 +8,7 @@ import { ConversationParticipents, ConversationParticipentsDocument } from '../c
 import { Message, MessageDocument } from '../message/message.schema';
 import { CreateConversationDto, AddParticipantsDto } from './dto/create-conversation.dto';
 import { ConversationType, ParticipantRole } from './conversation.constant';
-import { REDIS_CLIENT } from '../../../helpers/redis/redis.module';
+import { REDIS_CLIENT } from '../../../core/database/redis/redis.constants';
 import { SocketGateway } from '../../socket.gateway/socket.gateway';
 import { SocketRoomService } from '../../socket.gateway/services/socket-room.service';
 import { Queue } from 'bullmq';
@@ -16,21 +16,12 @@ import {
   BULLMQ_CONVERSATION_LAST_MESSAGE_QUEUE,
   BULLMQ_NOTIFY_PARTICIPANTS_QUEUE,
   QUEUE_NAMES,
-} from '../../../helpers/bullmq/bullmq.constants';
+} from '../../../core/queue/bullmq.constants';
 
 /**
  * Conversation Service
  *
  * 📚 CONVERSATION MANAGEMENT SERVICE
- *
- * Features:
- * - Create conversations (direct & group)
- * - Manage participants
- * - Real-time updates via Socket.IO
- * - Redis state management
- * - BullMQ async processing
- *
- * Compatible with Express.js conversation.service.ts
  */
 @Injectable()
 export class ConversationService {
