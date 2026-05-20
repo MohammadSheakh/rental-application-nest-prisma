@@ -45,6 +45,7 @@ import { BullMQModule } from '@app/queue';
     PrismaModule,
     RedisModule,       // Redis connection
     BullMQModule,      // ⭐ BullMQ queues (5 queues)
+    FirebaseModule,    // ⭐ Firebase for push notifications
     // SocketModule,      // ⭐ Socket.IO gateway (real-time)
 
     // ──────────────────────────────────────────────────────────────────────

@@ -22,7 +22,9 @@
       "@app/redis": ["libs/redis/src"],
       "@app/redis/*": ["libs/redis/src/*"],
       "@app/queue": ["libs/queue/src"],
-      "@app/queue/*": ["libs/queue/src/*"]
+      "@app/queue/*": ["libs/queue/src/*"],
+      "@app/notification": ["libs/notification/src"],
+      "@app/notification/*": ["libs/notification/src/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

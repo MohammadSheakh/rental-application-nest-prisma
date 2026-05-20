@@ -18,6 +18,7 @@ import { SocketAuthService } from './socket-auth.service';
 import { SocketRoomService } from './socket-room.service';
 import { WsJwtGuard } from './guards/ws-jwt.guard';
 import { REDIS_PUB_CLIENT, REDIS_SUB_CLIENT } from '@app/redis';
+import { FirebaseService } from '@app/notification';
 
 /**
  * Socket.IO Gateway
@@ -43,6 +44,7 @@ export class SocketGateway
     private jwtService: JwtService,
     private socketAuthService: SocketAuthService,
     private socketRoomService: SocketRoomService,
+    private firebaseService: FirebaseService,
     @Inject(REDIS_PUB_CLIENT) private redisPubClient: Redis,
     @Inject(REDIS_SUB_CLIENT) private redisSubClient: Redis,
   ) {}
@@ -466,8 +468,27 @@ export class SocketGateway
    */
   async emitToUser(userId: string, event: string, data: any): Promise<boolean> {
     try {
-      this.server.to(userId).emit(event, data);
-      return true;
+      const isOnline = await this.isUserOnline(userId);
+      if (isOnline) {
+        this.server.to(userId).emit(event, data);
+        this.logger.log(`🔔 Emitted to online user ${userId}`);
+        return true;
+      }
+
+      // Offline: push notification
+      const user = await this.socketAuthService.getUserProfile(userId);
+      if (user?.fcmToken) {
+        await this.firebaseService.sendPushNotification(
+          user.fcmToken,
+          data.title || 'New Notification',
+          data.message || 'You have a new message',
+          data,
+        );
+        this.logger.log(`📱 Push notification sent to offline user ${userId}`);
+        return true;
+      }
+
+      return false;
     } catch (error) {
       this.logger.error(`❌ Failed to emit to user: ${error.message}`);
       return false;

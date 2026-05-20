@@ -133,6 +133,13 @@ export class SocketAuthService implements OnModuleInit {
     }
   }
 
+  async getUserProfile(userId: string) {
+    return await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, fcmToken: true },
+    });
+  }
+
   /**
    * Add Online User to Redis
    */
