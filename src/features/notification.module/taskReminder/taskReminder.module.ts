@@ -8,10 +8,12 @@ import { TaskReminderService } from './services/taskReminder.service';
 
 @Module({
   imports: [
+    /*
     MongooseModule.forFeature([
       { name: TaskReminder.name, schema: TaskReminderSchema },
       { name: Task.name, schema: TaskSchema },
     ]),
+    */
     BullModule.registerQueue({
       name: 'taskReminders',
     }),

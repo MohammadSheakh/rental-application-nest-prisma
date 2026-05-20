@@ -16,7 +16,7 @@ import { PaymentTransactionModule } from '../../payment.module/paymentTransactio
  */
 @Module({
   imports: [
-    MongooseModule.forFeature([
+     // MongooseModule.forFeature([
       {
         name: UserSubscription.name,
         schema: UserSubscriptionSchema,

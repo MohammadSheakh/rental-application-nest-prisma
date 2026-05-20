@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { GenericService } from '../../../common/generic/generic.service';
-import { PrismaService } from 'src/core/database/prisma/prisma.service';
+import { GenericService } from '@app/common';
+import { PrismaService } from '@app/database';
 
 const publicUserRoleDataSelect = {
   id: true,

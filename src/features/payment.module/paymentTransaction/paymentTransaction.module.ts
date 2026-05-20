@@ -15,22 +15,26 @@ import { PaymentTransactionService } from './services/paymentTransaction.service
  */
 @Module({
   imports: [
+    /*
     MongooseModule.forFeature([
       {
         name: PaymentTransaction.name,
         schema: PaymentTransactionSchema,
       },
     ]),
+    */
   ],
   controllers: [PaymentTransactionController],
   providers: [PaymentTransactionService],
   exports: [
+    /*
     MongooseModule.forFeature([
       {
         name: PaymentTransaction.name,
         schema: PaymentTransactionSchema,
       },
     ]),
+    */
     PaymentTransactionService,
   ],
 })

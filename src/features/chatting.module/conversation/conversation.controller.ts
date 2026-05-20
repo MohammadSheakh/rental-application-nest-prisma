@@ -15,8 +15,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@ne
 
 import { ConversationService } from './conversation.service';
 import { CreateConversationDto, AddParticipantsDto, RemoveParticipantDto, GetConversationsQueryDto } from './dto/create-conversation.dto';
-import { AuthGuard } from '../../../common/guards/auth.guard';
-import { User } from '../../../common/decorators/user.decorator';
+import { AuthGuard, User } from '@app/common';
 
 /**
  * Conversation Controller

@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { PrismaModule } from '../../core/database/prisma/prisma.module';
+import { PrismaModule } from '@app/database';
 import { AuthModule } from '../authentication/auth.module';
 
 import { UserController } from './user/user.controller';
@@ -22,7 +22,7 @@ import { UserRoleDataController } from './userRoleData/userRoleData.controller';
 import { UserRoleDataService } from './userRoleData/userRoleData.service';
 // import { UserRoleData, UserRoleDataSchema } from './userRoleData/userRoleData.schema';
 
-import { RedisModule } from '../../core/database/redis/redis.module';
+import { RedisModule } from '@app/redis';
 
 /**
  * User Module
@@ -37,16 +37,16 @@ import { RedisModule } from '../../core/database/redis/redis.module';
   imports: [
     /*
     // MongoDB - UserProfile collection
-    MongooseModule.forFeature([{ name: UserProfile.name, schema: UserProfileSchema }]),
+     // MongooseModule.forFeature([{ name: UserProfile.name, schema: UserProfileSchema }]),
     
     // MongoDB - UserDevices collection
-    MongooseModule.forFeature([{ name: UserDevices.name, schema: UserDevicesSchema }]),
+     // MongooseModule.forFeature([{ name: UserDevices.name, schema: UserDevicesSchema }]),
     
     // MongoDB - OAuthAccount collection
-    MongooseModule.forFeature([{ name: OAuthAccount.name, schema: OAuthAccountSchema }]),
+     // MongooseModule.forFeature([{ name: OAuthAccount.name, schema: OAuthAccountSchema }]),
 
     // MongoDB - UserRoleData collection
-    MongooseModule.forFeature([{ name: UserRoleData.name, schema: UserRoleDataSchema }]),
+     // MongooseModule.forFeature([{ name: UserRoleData.name, schema: UserRoleDataSchema }]),
     */
 
     // Redis Module (for caching)

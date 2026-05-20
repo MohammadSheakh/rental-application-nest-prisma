@@ -3,13 +3,12 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
-import { UserService } from '../../features/user-management/user/user.service';
+import { IUserService, I_USER_SERVICE } from '../types/user-service.interface';
 
 /**
  * Secondary User Guard
- * 
- * 
  * 
  * Logic from senior reference example:
  * - Business users: Always allowed
@@ -17,7 +16,9 @@ import { UserService } from '../../features/user-management/user/user.service';
  */
 @Injectable()
 export class SecondaryUserGuard implements CanActivate {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    @Inject(I_USER_SERVICE) private readonly userService: IUserService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();

@@ -11,7 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { PaginateOptions } from '../../shared/types/paginate';
+import { PaginateOptions } from '../shared/types/paginate';
 import { GenericService } from './generic.service';
 
 /**

@@ -21,8 +21,8 @@ import type { UserPayload as UserPayloadType } from '../types/user-payload.type'
  * }
  */
 
-// Single decorator, two aliases so both @User() and @UserPayload() work
-const userParamDecorator = createParamDecorator(
+// Single decorator alias so @User() works
+export const UserDecorator = createParamDecorator(
   (data: keyof UserPayloadType | undefined, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
     const user: UserPayloadType = request.user;
@@ -33,12 +33,9 @@ const userParamDecorator = createParamDecorator(
   },
 );
 
-export const User = userParamDecorator;
-export const UserPayload = userParamDecorator; // alias — same thing
-
 /* -----------------------
 
-export const User = createParamDecorator(
+export const UserDecorator = createParamDecorator(
   (data: keyof UserPayload | undefined, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
     const user: UserPayload = request.user;

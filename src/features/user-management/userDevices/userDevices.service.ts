@@ -1,7 +1,7 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { Prisma, UserDevices } from '@prisma/client';
-import { GenericService } from '../../../common/generic/generic.service';
-import { PrismaService } from 'src/core/database/prisma/prisma.service';
+import { GenericService } from '@app/common';
+import { PrismaService } from '@app/database';
 import { DeviceType } from './enums/TDevice.enum';
 
 const publicUserDeviceSelect = {

@@ -13,10 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@ne
 
 import { NotificationService } from './notification.service';
 import { SendNotificationDto, BroadcastNotificationDto } from './dto/notification.dto';
-import { AuthGuard } from '../../../common/guards/auth.guard';
-import { UserPayload } from '../../../common/guards/auth.guard';
-import { User } from '../../../common/decorators/user.decorator';
-import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
+import { AuthGuard, UserPayload, User, TransformResponseInterceptor } from '@app/common';
 
 /**
  * Notification Controller

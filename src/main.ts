@@ -4,9 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 // Import global filters, interceptors, guards
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { HttpExceptionFilter, TransformResponseInterceptor, LoggingInterceptor } from '@app/common';
 
 // Import security packages
 import helmet from 'helmet';

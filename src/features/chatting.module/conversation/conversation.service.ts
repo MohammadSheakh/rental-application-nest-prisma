@@ -8,7 +8,7 @@ import { ConversationParticipents, ConversationParticipentsDocument } from '../c
 import { Message, MessageDocument } from '../message/message.schema';
 import { CreateConversationDto, AddParticipantsDto } from './dto/create-conversation.dto';
 import { ConversationType, ParticipantRole } from './conversation.constant';
-import { REDIS_CLIENT } from '../../../core/database/redis/redis.constants';
+import { REDIS_CLIENT } from '@app/redis';
 import { SocketGateway } from '../../socket.gateway/socket.gateway';
 import { SocketRoomService } from '../../socket.gateway/services/socket-room.service';
 import { Queue } from 'bullmq';

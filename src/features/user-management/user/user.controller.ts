@@ -9,15 +9,10 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
-import { GenericController } from '../../../common/generic/generic.controller';
+import { GenericController, AuthGuard, User as CurrentUser, TransformResponseInterceptor, SlidingWindowRateLimitGuard, RateLimit } from '@app/common';
 import { UserService } from './user.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { AuthGuard } from '../../../common/guards/auth.guard';
-import { User as CurrentUser } from '../../../common/decorators/user.decorator';
-import type { UserPayload } from '../../../common/types/user-payload.type';
-import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
-import { SlidingWindowRateLimitGuard } from '../../../common/guards/sliding-window-rate-limit.guard';
-import { RateLimit } from '../../../common/decorators/rate-limit.decorator';
+import type { UserPayload } from '@app/common';
 import { USER_RATE_LIMITS } from './user.constants';
 
 /**

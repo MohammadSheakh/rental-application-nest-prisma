@@ -12,9 +12,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { SubscriptionPlanService } from './services/subscriptionPlan.service';
 import { CreateSubscriptionPlanDto, UpdateSubscriptionPlanDto } from './dto/subscriptionPlan.dto';
-import { AuthGuard } from '../../../common/guards/auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
+import { AuthGuard, RolesGuard, Roles } from '@app/common';
 import { Throttle } from '@nestjs/throttler';
 
 /**

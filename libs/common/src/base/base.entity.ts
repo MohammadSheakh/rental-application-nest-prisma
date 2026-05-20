@@ -1,5 +1,5 @@
 import { Document, Model, FilterQuery, UpdateQuery, QueryOptions } from 'mongoose';
-import { PaginateOptions, PaginateResult } from '../../types/paginate';
+import { PaginateOptions, PaginateResult } from '../shared/types/paginate';
 
 /**
  * Base Entity Interface

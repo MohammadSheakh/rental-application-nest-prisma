@@ -11,8 +11,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { StripeAccountService } from './services/stripeAccount.service';
 
 
-import { AuthGuard } from 'src/common/guards/auth.guard';
-import { User } from 'src/common/decorators/user.decorator';
+import { AuthGuard, User } from '@app/common';
 
 /**
  * StripeAccount Controller

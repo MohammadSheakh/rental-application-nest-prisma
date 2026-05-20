@@ -7,7 +7,7 @@ import { NotificationService } from './notification.service';
 import { Notification, NotificationSchema } from './notification.schema';
 import { TaskReminderModule } from './taskReminder/taskReminder.module';
 
-import { RedisModule } from '../../core/database/redis/redis.module';
+import { RedisModule } from '@app/redis';
 import { SocketModule } from '../socket.gateway/socket.module';
 import { BULLMQ_NOTIFICATION_QUEUE, QUEUE_NAMES } from '../../core/queue/bullmq.constants';
 
@@ -19,10 +19,12 @@ import { BULLMQ_NOTIFICATION_QUEUE, QUEUE_NAMES } from '../../core/queue/bullmq.
 @Module({
   imports: [
     // MongoDB - Notification collection
+    /*
     MongooseModule.forFeature([{
       name: Notification.name,
       schema: NotificationSchema,
     }]),
+    */
 
     // Redis Module (for caching)
     RedisModule,

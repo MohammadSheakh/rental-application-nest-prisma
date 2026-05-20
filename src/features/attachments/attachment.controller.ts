@@ -28,13 +28,8 @@ import {
   GetAttachmentsByEntityDto,
 } from './dto/attachment.dto';
 
-import { AuthGuard } from '../../common/guards/auth.guard';
-import { UserPayload } from '../../common/guards/auth.guard';
-import { User } from '../../common/decorators/user.decorator';
+import { AuthGuard, UserPayload, User, TransformResponseInterceptor, UseFileUploadPipeline, GenericController } from '@app/common';
 
-import { TransformResponseInterceptor } from '../../common/interceptors/transform-response.interceptor';
-import { UseFileUploadPipeline } from '../../common/decorators/use-file-upload-pipeline.decorator';
-import { GenericController } from 'src/common/generic/generic.controller';
 
 /**
  * Attachment Controller

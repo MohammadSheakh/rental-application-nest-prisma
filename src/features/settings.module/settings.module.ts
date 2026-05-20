@@ -13,7 +13,7 @@ import { SettingsService } from './services/settings.service';
  */
 @Module({
   imports: [
-    MongooseModule.forFeature([
+     // MongooseModule.forFeature([
       {
         name: Settings.name,
         schema: SettingsSchema,
@@ -23,7 +23,7 @@ import { SettingsService } from './services/settings.service';
   controllers: [SettingsController],
   providers: [SettingsService],
   exports: [
-    MongooseModule.forFeature([
+     // MongooseModule.forFeature([
       {
         name: Settings.name,
         schema: SettingsSchema,

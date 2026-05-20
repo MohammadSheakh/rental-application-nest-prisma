@@ -14,6 +14,16 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
+    "paths": {
+      "@app/common": ["libs/common/src"],
+      "@app/common/*": ["libs/common/src/*"],
+      "@app/database": ["libs/database/src"],
+      "@app/database/*": ["libs/database/src/*"],
+      "@app/redis": ["libs/redis/src"],
+      "@app/redis/*": ["libs/redis/src/*"],
+      "@app/queue": ["libs/queue/src"],
+      "@app/queue/*": ["libs/queue/src/*"]
+    },
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
@@ -22,7 +32,7 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "libs/**/*.ts", "types/**/*.d.ts"],
   "exclude": [
     "dist",
     "node_modules",
@@ -37,6 +47,10 @@
     "src/features/attachments/**",
     "src/features/chatting.module/**",
     "src/features/notification.module/**",
-    "src/features/authentication/auth/strategies/**"
+    "src/features/authentication/auth/strategies/**",
+    "src/features/subscription.module/**",
+    "src/features/settings.module/**",
+    "src/features/payment.module/**",
+    "src/features/socket.gateway/**"
   ]
 }

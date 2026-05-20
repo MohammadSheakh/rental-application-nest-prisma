@@ -16,9 +16,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@ne
 import { Throttle } from '@nestjs/throttler';
 import { CreatePaymentTransactionDto, QueryPaymentTransactionDto, UpdatePaymentStatusDto } from "../dto/paymentTransaction.dto";
 import { PaymentTransactionService } from "../services/paymentTransaction.service";
-import { AuthGuard } from 'src/common/guards/auth.guard';
-import { RolesGuard } from 'src/common/guards/roles.guard';
-import { Roles } from 'src/common/decorators/roles.decorator';
+import { AuthGuard, RolesGuard, Roles } from '@app/common';
 
 /**
  * PaymentTransaction Controller

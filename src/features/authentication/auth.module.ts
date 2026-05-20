@@ -1,8 +1,8 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { RedisModule } from 'src/core/database/redis/redis.module';
-import { PrismaModule } from 'src/core/database/prisma/prisma.module';
+import { RedisModule } from '@app/redis';
+import { PrismaModule } from '@app/database';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';

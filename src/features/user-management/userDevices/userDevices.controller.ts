@@ -13,10 +13,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@ne
 
 import { UserDevicesService } from './userDevices.service';
 import { RegisterDeviceDto } from './dto/register-device.dto';
-import { AuthGuard } from '../../../common/guards/auth.guard';
-import { UserPayload as CurrentUser } from '../../../common/decorators/user.decorator';
-import type { UserPayload } from '../../../common/types/user-payload.type';
-import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
+import { AuthGuard, UserPayload as CurrentUser, TransformResponseInterceptor } from '@app/common';
+import type { UserPayload } from '@app/common';
 
 /**
  * UserDevices Controller

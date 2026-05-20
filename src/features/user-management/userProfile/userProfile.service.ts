@@ -2,9 +2,9 @@ import { Injectable, Inject, NotFoundException, Logger } from '@nestjs/common';
 import { Prisma, UserProfile } from '@prisma/client';
 import Redis from 'ioredis';
 
-import { GenericService } from '../../../common/generic/generic.service';
-import { PrismaService } from 'src/core/database/prisma/prisma.service';
-import { REDIS_CLIENT } from 'src/core/database/redis/redis.constants';
+import { GenericService } from '@app/common';
+import { PrismaService } from '@app/database';
+import { REDIS_CLIENT } from '@app/redis';
 import { USER_CACHE_CONFIG } from '../user/user.constants';
 
 

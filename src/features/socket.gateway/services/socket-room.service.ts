@@ -1,8 +1,8 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
-import { REDIS_CLIENT } from '../../../core/database/redis/redis.module';
-import { PrismaService } from '../../../core/database/prisma/prisma.service';
+import { REDIS_CLIENT } from '../@app/redis';
+import { PrismaService } from '@app/database';
 
 /**
  * Socket Room Service

@@ -16,12 +16,12 @@ import { MessageReadStatusService } from './messageReadStatus/messageReadStatus.
 import { MessageReadStatus, MessageReadStatusSchema } from './messageReadStatus/messageReadStatus.schema';
 
 import { SocketModule } from '../socket.gateway/socket.module';
-import { RedisModule } from '../../core/database/redis/redis.module';
+import { RedisModule } from '@app/redis';
 import {
   BULLMQ_CONVERSATION_LAST_MESSAGE_QUEUE,
   BULLMQ_NOTIFY_PARTICIPANTS_QUEUE,
   QUEUE_NAMES,
-} from '../../core/queue/bullmq.constants';
+} from '@app/queue';
 
 /**
  * Chatting Module
@@ -31,6 +31,7 @@ import {
 @Module({
   imports: [
     // MongoDB Collections
+    /*
     MongooseModule.forFeature([
       {
         name: Conversation.name,
@@ -49,6 +50,7 @@ import {
         schema: MessageReadStatusSchema,
       },
     ]),
+    */
 
     // Redis Module (for state management)
     RedisModule,
@@ -119,6 +121,7 @@ import {
     ConversationService,
     MessageService,
     MessageReadStatusService,
+    /*
     MongooseModule.forFeature([
       {
         name: Conversation.name,
@@ -137,6 +140,7 @@ import {
         schema: MessageReadStatusSchema,
       },
     ]),
+    */
   ],
 })
 export class ChattingModule {}

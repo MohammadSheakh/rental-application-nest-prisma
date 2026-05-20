@@ -20,6 +20,7 @@ import { ConfigService } from '../config/config.service';
 @Global()
 @Module({
   imports: [
+    /*
     MongooseModule.forRootAsync({
       useFactory: async (configService: ConfigService) => {
         const mongoUri = configService.getMongoUri();
@@ -67,6 +68,7 @@ import { ConfigService } from '../config/config.service';
       },
       inject: [ConfigService],
     }),
+    */
   ],
 })
 export class DatabaseModule implements OnModuleDestroy {

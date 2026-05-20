@@ -5,8 +5,8 @@ import { Redis } from 'ioredis';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
-import { REDIS_CLIENT } from '../../../core/database/redis/redis.constants';
-import { PrismaService } from '../../../core/database/prisma/prisma.service';
+import { REDIS_CLIENT } from '@app/redis';
+import { PrismaService } from '@app/database';
 import { ConversationParticipents, ConversationParticipentsDocument } from '../../chatting.module/conversationParticipents/conversationParticipents.schema';
 
 interface UserConnectionInfo {

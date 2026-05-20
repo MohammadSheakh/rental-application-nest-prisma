@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AttachmentController } from './attachment.controller';
 import { AttachmentService } from './attachment.service';
-import { RedisModule } from '../../core/database/redis/redis.module';
+import { RedisModule } from '@app/redis';
 import { CloudinaryStrategy } from './strategies/cloudinary.strategy';
 import { S3Strategy } from './strategies/s3.strategy';
 import { FileUploadStrategyFactory } from './strategies/file-upload.strategy.factory';

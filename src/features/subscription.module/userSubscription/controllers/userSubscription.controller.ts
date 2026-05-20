@@ -10,10 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UserSubscriptionService } from './services/userSubscription.service';
-import { AuthGuard } from '../../../common/guards/auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { User } from '../../../common/decorators/user.decorator';
+import { AuthGuard, RolesGuard, Roles, User } from '@app/common';
 import { Throttle } from '@nestjs/throttler';
 import { UserSubscriptionStatus } from './constants/userSubscription.constants';
 

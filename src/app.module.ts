@@ -4,12 +4,12 @@ import { AppService } from './app.service';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from './config/config.module';
 // import { DatabaseModule } from './core/database/mongo/mongodb.module';
-import { RedisModule } from './core/database/redis/redis.module';
+import { RedisModule } from '@app/redis';
 import { AuthModule } from './features/authentication/auth.module';
 import { UserModule } from './features/user-management/user.module';
 import { AttachmentModule } from './features/attachments/attachment.module';
-import { PrismaModule } from './core/database/prisma/prisma.module';
-import { BullMQModule } from './core/queue/bullmq.module';
+import { PrismaModule } from '@app/database';
+import { BullMQModule } from '@app/queue';
 
 
 

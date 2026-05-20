@@ -18,10 +18,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { OAuthLoginDto } from './dto/oauth-login.dto';
 import { CreateOtpDto, VerifyOtpDto } from '../otp/dto/create-otp.dto';
-import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
-import { SlidingWindowRateLimitGuard } from '../../../common/guards/sliding-window-rate-limit.guard';
-import { RateLimit } from '../../../common/decorators/rate-limit.decorator';
-import { GLOBAL_RATE_LIMITS } from '../../../common/constants/rate-limit.constants';
+import { TransformResponseInterceptor, SlidingWindowRateLimitGuard, RateLimit, GLOBAL_RATE_LIMITS } from '@app/common';
 
 /**
  * Auth Controller

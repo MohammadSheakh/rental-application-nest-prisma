@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PaginateOptions, PaginateResult } from '../../shared/types/paginate';
+import { PaginateOptions, PaginateResult } from '../shared/types/paginate';
 
 type PrismaDelegate<TRecord = any> = {
   findUnique(args: any): Promise<TRecord | null>;

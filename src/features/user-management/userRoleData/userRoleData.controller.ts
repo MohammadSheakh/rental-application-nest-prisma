@@ -14,10 +14,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 
 import { UserRoleDataService } from './userRoleData.service';
 import { CreateUserRoleDataDto, UpdateUserRoleDataDto } from './dto/userRoleData.dto';
-import { AuthGuard } from '../../../common/guards/auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { TransformResponseInterceptor } from '../../../common/interceptors/transform-response.interceptor';
+import { AuthGuard, RolesGuard, Roles, TransformResponseInterceptor } from '@app/common';
 
 @ApiTags('User Role Data')
 @Controller('user-role-data')

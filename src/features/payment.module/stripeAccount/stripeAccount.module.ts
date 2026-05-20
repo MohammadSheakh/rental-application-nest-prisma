@@ -14,23 +14,27 @@ import { UserModule } from '../../user.module/user.module';
  */
 @Module({
   imports: [
+    /*
     MongooseModule.forFeature([
       {
         name: StripeAccount.name,
         schema: StripeAccountSchema,
       },
     ]),
+    */
     UserModule, // For updating user records
   ],
   controllers: [StripeAccountController],
   providers: [StripeAccountService],
   exports: [
+    /*
     MongooseModule.forFeature([
       {
         name: StripeAccount.name,
         schema: StripeAccountSchema,
       },
     ]),
+    */
     StripeAccountService,
   ],
 })

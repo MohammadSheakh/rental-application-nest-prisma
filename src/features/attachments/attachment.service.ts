@@ -3,9 +3,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Redis } from 'ioredis';
 
-import { GenericService } from '../../../common/generic/generic.service';
+import { GenericService } from '@app/common';
 import { Attachment, AttachmentDocument, AttachmentType } from './attachment.schema';
-import { REDIS_CLIENT } from '../../core/database/redis/redis.constants';
+import { REDIS_CLIENT } from '@app/redis';
 import { IFileUploadStrategy } from './strategies/file-upload.strategy.interface';
 
 /**

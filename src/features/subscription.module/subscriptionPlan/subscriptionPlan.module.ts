@@ -14,7 +14,7 @@ import { UserModule } from '../../user.module/user.module';
  */
 @Module({
   imports: [
-    MongooseModule.forFeature([
+     // MongooseModule.forFeature([
       {
         name: SubscriptionPlan.name,
         schema: SubscriptionPlanSchema,
@@ -25,7 +25,7 @@ import { UserModule } from '../../user.module/user.module';
   controllers: [SubscriptionPlanController],
   providers: [SubscriptionPlanService],
   exports: [
-    MongooseModule.forFeature([
+     // MongooseModule.forFeature([
       {
         name: SubscriptionPlan.name,
         schema: SubscriptionPlanSchema,

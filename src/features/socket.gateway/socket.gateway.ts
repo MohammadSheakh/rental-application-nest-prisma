@@ -17,7 +17,7 @@ import { Redis } from 'ioredis';
 import { SocketAuthService } from './socket-auth.service';
 import { SocketRoomService } from './socket-room.service';
 import { WsJwtGuard } from './guards/ws-jwt.guard';
-import { REDIS_PUB_CLIENT, REDIS_SUB_CLIENT } from '../../core/database/redis/redis.constants';
+import { REDIS_PUB_CLIENT, REDIS_SUB_CLIENT } from '@app/redis';
 
 /**
  * Socket.IO Gateway

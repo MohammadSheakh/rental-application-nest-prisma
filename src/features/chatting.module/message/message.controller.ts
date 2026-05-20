@@ -17,8 +17,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam }
 
 import { MessageService } from './message.service';
 import { SendMessageDto, GetMessagesQueryDto, UpdateMessageDto, DeleteMessageDto } from './dto/message.dto';
-import { AuthGuard } from '../../../common/guards/auth.guard';
-import { User } from '../../../common/decorators/user.decorator';
+import { AuthGuard, User } from '@app/common';
 
 /**
  * Message Controller

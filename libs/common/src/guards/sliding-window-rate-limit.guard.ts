@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import Redis from 'ioredis';
-import { REDIS_CLIENT } from '../../core/database/redis/redis.constants';
+import { REDIS_CLIENT } from '../constants/redis.constants';
 import {
   RATE_LIMIT_KEY,
   RateLimitOptions,

@@ -11,9 +11,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@ne
 import { SettingsService } from './services/settings.service';
 import { CreateOrUpdateSettingsDto, GetSettingsByTypeDto } from './dto/settings.dto';
 import { SettingsType } from '../constants/settings.constants';
-import { AuthGuard } from '../../../common/guards/auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
+import { AuthGuard, RolesGuard, Roles } from '@app/common';
 import { Throttle } from '@nestjs/throttler';
 
 /**

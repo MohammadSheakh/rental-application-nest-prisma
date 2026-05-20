@@ -17,8 +17,8 @@ import { OAuthLoginDto, OAuthProvider } from './dto/oauth-login.dto';
 import { OtpService } from '../otp/otp.service';
 import { EmailService } from '../email/email.service';
 import { OAuthVerificationService } from '../oauth/oauth-verification.service';
-import { REDIS_CLIENT } from 'src/core/database/redis/redis.constants';
-import { PrismaService } from 'src/core/database/prisma/prisma.service';
+import { REDIS_CLIENT } from '@app/redis';
+import { PrismaService } from '@app/database';
 import { OtpType } from '../otp/interfaces/otp-payload.interface';
 
 type AuthUser = Prisma.UserGetPayload<{

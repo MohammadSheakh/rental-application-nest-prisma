@@ -15,12 +15,14 @@ import { PaymentTransactionModule } from '../paymentTransaction/paymentTransacti
  */
 @Module({
   imports: [
+    /*
     MongooseModule.forFeature([
       {
         name: RevenueCatWebhookEvent.name,
         schema: RevenueCatWebhookEventSchema,
       },
     ]),
+    */
     PaymentTransactionModule, // For updating transactions
   ],
   controllers: [RevenueCatWebhookController],

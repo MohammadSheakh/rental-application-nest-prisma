@@ -14,12 +14,14 @@ import { PaymentTransactionModule } from '../paymentTransaction/paymentTransacti
  */
 @Module({
   imports: [
+    /*
     MongooseModule.forFeature([
       {
         name: StripeWebhookEvent.name,
         schema: StripeWebhookEventSchema,
       },
     ]),
+    */
     PaymentTransactionModule, // For updating transactions
   ],
   controllers: [StripeWebhookController],

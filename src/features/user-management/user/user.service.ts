@@ -2,9 +2,9 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import Redis from 'ioredis';
 
-import { GenericService } from '../../../common/generic/generic.service';
-import { REDIS_CLIENT } from '../../../core/database/redis/redis.constants';
-import { PrismaService } from '../../../core/database/prisma/prisma.service';
+import { GenericService } from '@app/common';
+import { REDIS_CLIENT } from '@app/redis';
+import { PrismaService } from '@app/database';
 import { USER_CACHE_CONFIG } from './user.constants';
 
 const publicUserSelect = {
