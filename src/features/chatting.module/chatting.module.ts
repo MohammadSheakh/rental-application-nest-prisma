@@ -1,19 +1,14 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { BullModule } from '@nestjs/bullmq';
+import { PrismaModule } from '@app/database';
 
 import { ConversationController } from './conversation/conversation.controller';
 import { ConversationService } from './conversation/conversation.service';
-import { Conversation, ConversationSchema } from './conversation/conversation.schema';
-
-import { ConversationParticipents, ConversationParticipentsSchema } from './conversationParticipents/conversationParticipents.schema';
 
 import { MessageController } from './message/message.controller';
 import { MessageService } from './message/message.service';
-import { Message, MessageSchema } from './message/message.schema';
 
 import { MessageReadStatusService } from './messageReadStatus/messageReadStatus.service';
-import { MessageReadStatus, MessageReadStatusSchema } from './messageReadStatus/messageReadStatus.schema';
 
 import { SocketModule } from '../socket.gateway/socket.module';
 import { RedisModule } from '@app/redis';
@@ -30,27 +25,8 @@ import {
  */
 @Module({
   imports: [
-    // MongoDB Collections
-    /*
-    MongooseModule.forFeature([
-      {
-        name: Conversation.name,
-        schema: ConversationSchema,
-      },
-      {
-        name: ConversationParticipents.name,
-        schema: ConversationParticipentsSchema,
-      },
-      {
-        name: Message.name,
-        schema: MessageSchema,
-      },
-      {
-        name: MessageReadStatus.name,
-        schema: MessageReadStatusSchema,
-      },
-    ]),
-    */
+    // Database Module
+    PrismaModule,
 
     // Redis Module (for state management)
     RedisModule,
@@ -121,26 +97,6 @@ import {
     ConversationService,
     MessageService,
     MessageReadStatusService,
-    /*
-    MongooseModule.forFeature([
-      {
-        name: Conversation.name,
-        schema: ConversationSchema,
-      },
-      {
-        name: ConversationParticipents.name,
-        schema: ConversationParticipentsSchema,
-      },
-      {
-        name: Message.name,
-        schema: MessageSchema,
-      },
-      {
-        name: MessageReadStatus.name,
-        schema: MessageReadStatusSchema,
-      },
-    ]),
-    */
   ],
 })
 export class ChattingModule {}

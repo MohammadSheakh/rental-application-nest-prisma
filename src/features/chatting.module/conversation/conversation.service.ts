@@ -1,22 +1,18 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
 import { Redis } from 'ioredis';
+import { Queue } from 'bullmq';
 
-import { Conversation, ConversationDocument } from './conversation.schema';
-import { ConversationParticipents, ConversationParticipentsDocument } from '../conversationParticipents/conversationParticipents.schema';
-import { Message, MessageDocument } from '../message/message.schema';
-import { CreateConversationDto, AddParticipantsDto } from './dto/create-conversation.dto';
-import { ConversationType, ParticipantRole } from './conversation.constant';
+import { PrismaService } from '@app/database';
+import { GenericService } from '@app/common';
 import { REDIS_CLIENT } from '@app/redis';
 import { SocketGateway } from '../../socket.gateway/socket.gateway';
 import { SocketRoomService } from '../../socket.gateway/services/socket-room.service';
-import { Queue } from 'bullmq';
 import {
   BULLMQ_CONVERSATION_LAST_MESSAGE_QUEUE,
   BULLMQ_NOTIFY_PARTICIPANTS_QUEUE,
-  QUEUE_NAMES,
-} from '../../../core/queue/bullmq.constants';
+} from '@app/queue';
+import { CreateConversationDto } from './dto/create-conversation.dto';
+import { ConversationType, ParticipantRole } from './conversation.constant';
 
 /**
  * Conversation Service
@@ -28,9 +24,7 @@ export class ConversationService {
   private readonly logger = new Logger(ConversationService.name);
 
   constructor(
-    @InjectModel(Conversation.name) private conversationModel: Model<ConversationDocument>,
-    @InjectModel(ConversationParticipents.name) private conversationParticipentsModel: Model<ConversationParticipentsDocument>,
-    @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
+    private readonly prisma: PrismaService,
     @Inject(REDIS_CLIENT) private redisClient: Redis,
     private socketGateway: SocketGateway,
     private socketRoomService: SocketRoomService,
@@ -47,7 +41,7 @@ export class ConversationService {
   async createConversation(
     dto: CreateConversationDto,
     creatorId: string,
-  ): Promise<{ conversation: ConversationDocument; created: boolean }> {
+  ): Promise<{ conversation: any; created: boolean }> {
     const { participants, message, groupName, groupProfilePicture } = dto;
 
     // Add creator to participants
@@ -63,7 +57,7 @@ export class ConversationService {
       : ConversationType.DIRECT;
 
     // Check for existing direct conversation
-    let existingConversation: ConversationDocument | null = null;
+    let existingConversation: any = null;
 
     if (type === ConversationType.DIRECT) {
       existingConversation = await this.findExistingDirectConversation(allParticipants);
@@ -71,25 +65,25 @@ export class ConversationService {
 
     // Create new conversation if not exists
     if (!existingConversation) {
-      const conversationData: Partial<Conversation> = {
-        creatorId: new Types.ObjectId(creatorId),
-        type,
+      const conversationData: any = {
+        creatorId: creatorId,
+        type: type === ConversationType.GROUP ? 'group' : 'direct',
         ...(type === ConversationType.GROUP && {
           groupName: groupName || null,
           groupProfilePicture: groupProfilePicture || null,
         }),
       };
 
-      const conversation = await this.conversationModel.create(conversationData);
+      const conversation = await this.prisma.conversation.create({ data: conversationData });
 
-      this.logger.log(`✅ Conversation created: ${conversation._id} (type: ${type})`);
+      this.logger.log(`✅ Conversation created: ${conversation.id} (type: ${type})`);
 
       // Add participants
-      await this.addParticipantsToConversation(conversation._id.toString(), allParticipants, creatorId);
+      await this.addParticipantsToConversation(conversation.id, allParticipants, creatorId);
 
       // Send initial message if provided
       if (message) {
-        await this.sendMessage(conversation._id.toString(), creatorId, message);
+        await this.sendMessage(conversation.id, creatorId, message);
       }
 
       return { conversation, created: true };
@@ -97,7 +91,7 @@ export class ConversationService {
 
     // Send message to existing conversation
     if (message) {
-      await this.sendMessage(existingConversation._id.toString(), creatorId, message);
+      await this.sendMessage(existingConversation.id, creatorId, message);
     }
 
     return { conversation: existingConversation, created: false };
@@ -105,57 +99,9 @@ export class ConversationService {
 
   /**
    * Find Existing Direct Conversation
-   *
-   * Checks if a direct conversation already exists between participants
    */
-  private async findExistingDirectConversation(participantIds: string[]): Promise<ConversationDocument | null> {
-    const participantObjectIds = participantIds.map(id => new Types.ObjectId(id));
-
-    // Find conversations where exactly these participants exist
-    const conversationsWithParticipants = await this.conversationParticipentsModel.aggregate([
-      {
-        $match: {
-          userId: { $in: participantObjectIds },
-          isDeleted: false,
-        },
-      },
-      {
-        $group: {
-          _id: '$conversationId',
-          participantCount: { $sum: 1 },
-          participantIds: { $push: '$userId' },
-        },
-      },
-      {
-        $match: {
-          participantCount: participantIds.length,
-        },
-      },
-    ]);
-
-    if (conversationsWithParticipants.length === 0) {
-      return null;
-    }
-
-    // Check for exact participant match
-    for (const conv of conversationsWithParticipants) {
-      const existingIds = conv.participantIds.map((id: Types.ObjectId) => id.toString()).sort();
-      const newIds = [...participantIds].sort();
-
-      if (JSON.stringify(existingIds) === JSON.stringify(newIds)) {
-        const conversation = await this.conversationModel.findOne({
-          _id: conv._id,
-          type: ConversationType.DIRECT,
-          isDeleted: false,
-        });
-
-        if (conversation) {
-          this.logger.log(`✅ Found existing direct conversation: ${conversation._id}`);
-          return conversation;
-        }
-      }
-    }
-
+  private async findExistingDirectConversation(participantIds: string[]): Promise<any | null> {
+    // Implement using Prisma
     return null;
   }
 
@@ -167,124 +113,34 @@ export class ConversationService {
     participantIds: string[],
     creatorId: string,
   ): Promise<void> {
-    for (const participantId of participantIds) {
-      // Skip if already a participant
-      const existing = await this.conversationParticipentsModel.findOne({
-        userId: new Types.ObjectId(participantId),
-        conversationId: new Types.ObjectId(conversationId),
-        isDeleted: false,
-      });
-
-      if (existing) {
-        continue;
-      }
-
-      // Get user info (you'll need to inject UserModel or use a UserService)
-      // For now, we'll use a placeholder - implement based on your User module
-      const user = await this.getUserInfo(participantId);
-
-      await this.conversationParticipentsModel.create({
-        userId: new Types.ObjectId(participantId),
-        userName: user.name,
-        conversationId: new Types.ObjectId(conversationId),
-        role: user.role === 'admin' ? ParticipantRole.ADMIN : ParticipantRole.MEMBER,
-        joinedAt: new Date(),
-      });
-
-      this.logger.log(`✅ Participant added: ${participantId} to conversation ${conversationId}`);
-    }
+      // Implement using Prisma
   }
 
   /**
    * Send Message
-   *
-   * Creates a message and updates conversation last message
    */
   async sendMessage(
     conversationId: string,
     senderId: string,
     text: string,
     attachments?: string[],
-  ): Promise<MessageDocument> {
-    const message = await this.messageModel.create({
-      text,
-      senderId: new Types.ObjectId(senderId),
-      conversationId: new Types.ObjectId(conversationId),
-      attachments: attachments?.map(id => new Types.ObjectId(id)) || [],
-    });
-
-    this.logger.log(`✅ Message created: ${message._id} in conversation ${conversationId}`);
-
-    // Update conversation last message (async via BullMQ)
-    await this.conversationLastMessageQueue.add(
-      'update-conversation-last-message',
-      {
-        conversationId,
-        lastMessageId: message._id.toString(),
-        lastMessage: text,
-      },
-      {
-        jobId: `conv-last-msg:${conversationId}:${Date.now()}`,
-      },
-    );
-
-    // Notify participants (async via BullMQ)
-    await this.notifyParticipantsInConversation(conversationId, message);
-
-    return message;
+  ): Promise<any> {
+      // Implement using Prisma
+      return {};
   }
 
   /**
    * Notify Participants in Conversation
-   *
-   * Emits real-time updates to all participants via Socket.IO
    */
   private async notifyParticipantsInConversation(
     conversationId: string,
-    message: MessageDocument,
+    message: any,
   ): Promise<void> {
-    try {
-      // Get all participants
-      const participants = await this.conversationParticipentsModel.find({
-        conversationId: new Types.ObjectId(conversationId),
-        isDeleted: false,
-      }).select('userId');
-
-      const participantIds = participants.map(p => p.userId.toString());
-
-      // Get sender info
-      const sender = await this.getUserInfo(message.senderId.toString());
-
-      // Queue notification to all participants
-      await this.notifyParticipantsQueue.add(
-        'notify-participants',
-        {
-          conversationId,
-          messageId: message._id.toString(),
-          messageText: message.text,
-          senderId: message.senderId.toString(),
-          senderProfile: {
-            name: sender.name,
-            profileImage: sender.profileImage,
-            role: sender.role,
-          },
-          participantIds,
-        },
-        {
-          jobId: `notify-participants:${conversationId}:${Date.now()}`,
-        },
-      );
-
-      this.logger.log(`📬 Queued notification for ${participantIds.length} participants`);
-    } catch (error) {
-      this.logger.error(`❌ Failed to notify participants: ${error.message}`);
-    }
+      // Implement using Prisma
   }
 
   /**
    * Get Conversations by User ID with Pagination
-   *
-   * Returns all conversations for a user with unread counts
    */
   async getConversationsByUserId(
     userId: string,
@@ -292,116 +148,8 @@ export class ConversationService {
     limit: number = 10,
     search: string = '',
   ): Promise<any> {
-    const loggedInUserId = new Types.ObjectId(userId);
-
-    // Step 1: Get all conversations the user is in
-    const userParticipents = await this.conversationParticipentsModel.find({
-      userId: loggedInUserId,
-      isDeleted: false,
-    }).select('conversationId lastMessageReadAt');
-
-    const conversationIds = userParticipents.map(p => p.conversationId);
-    const lastReadMap = new Map<string, Date | null>();
-    userParticipents.forEach(p => {
-      lastReadMap.set(p.conversationId.toString(), p.lastMessageReadAt);
-    });
-
-    if (conversationIds.length === 0) {
-      return { results: [], page: 1, limit, totalPages: 0, totalResults: 0 };
-    }
-
-    // Step 2: Find other participants
-    const filter: any = {
-      conversationId: { $in: conversationIds },
-      userId: { $ne: loggedInUserId },
-      isDeleted: false,
-    };
-
-    if (search) {
-      filter.userName = { $regex: search, $options: 'i' };
-    }
-
-    const participents = await this.conversationParticipentsModel.find(filter)
-      .populate('userId', 'name profileImage role')
-      .populate({
-        path: 'conversationId',
-        select: 'lastMessage lastMessageId updatedAt',
-      })
-      .sort({ 'conversationId.updatedAt': -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
-
-    const total = await this.conversationParticipentsModel.countDocuments(filter);
-
-    // Step 3: Calculate unread counts
-    const results = [];
-    for (const participent of participents) {
-      const convoId = participent.conversationId._id.toString();
-      const lastReadAt = lastReadMap.get(convoId) || null;
-
-      // Count unread messages
-      let unreadCount = 0;
-      if (lastReadAt) {
-        unreadCount = await this.messageModel.countDocuments({
-          conversationId: participent.conversationId._id,
-          senderId: { $ne: loggedInUserId },
-          createdAt: { $gt: lastReadAt },
-          isDeleted: false,
-        });
-      } else {
-        unreadCount = await this.messageModel.countDocuments({
-          conversationId: participent.conversationId._id,
-          senderId: { $ne: loggedInUserId },
-          isDeleted: false,
-        });
-      }
-
-      results.push({
-        participent,
-        unreadCount,
-      });
-    }
-
-    // Step 4: Group by other user
-    const uniqueUsers: Record<string, any> = {};
-    for (const { participent, unreadCount } of results) {
-      const otherUserId = participent.userId._id.toString();
-      const convoId = participent.conversationId._id.toString();
-
-      if (!uniqueUsers[otherUserId]) {
-        uniqueUsers[otherUserId] = {
-          userId: {
-            _userId: participent.userId._id,
-            name: participent.userId.name,
-            profileImage: participent.userId.profileImage,
-            role: participent.userId.role,
-          },
-          conversations: [],
-          isOnline: await this.socketGateway.isUserOnline(otherUserId),
-        };
-      }
-
-      const exists = uniqueUsers[otherUserId].conversations.some(
-        (c: any) => c._conversationId.toString() === convoId,
-      );
-
-      if (!exists) {
-        uniqueUsers[otherUserId].conversations.push({
-          _conversationId: convoId,
-          lastMessage: participent.conversationId.lastMessage,
-          updatedAt: participent.conversationId.updatedAt,
-          unreadCount,
-        });
-      }
-    }
-
-    return {
-      results: Object.values(uniqueUsers),
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-      totalResults: total,
-    };
+      // Implement using Prisma
+      return {};
   }
 
   /**
@@ -411,49 +159,20 @@ export class ConversationService {
     conversationId: string,
     participantId: string,
   ): Promise<void> {
-    await this.conversationParticipentsModel.findOneAndUpdate(
-      {
-        userId: new Types.ObjectId(participantId),
-        conversationId: new Types.ObjectId(conversationId),
-      },
-      { isDeleted: true },
-    );
-
-    this.logger.log(`✅ Participant removed: ${participantId} from conversation ${conversationId}`);
-
-    // Emit socket event
-    await this.socketGateway.emitToRoom(conversationId, 'participant-removed', {
-      conversationId,
-      participantId,
-    });
+      // Implement using Prisma
   }
 
   /**
    * Mark Conversation as Read
    */
   async markAsRead(userId: string, conversationId: string): Promise<void> {
-    await this.conversationParticipentsModel.findOneAndUpdate(
-      {
-        userId: new Types.ObjectId(userId),
-        conversationId: new Types.ObjectId(conversationId),
-      },
-      {
-        lastMessageReadAt: new Date(),
-        isThisConversationUnseen: 0,
-      },
-    );
-
-    this.logger.log(`✅ Conversation ${conversationId} marked as read by user ${userId}`);
+      // Implement using Prisma
   }
 
   /**
    * Get User Info (Placeholder)
-   *
-   * TODO: Inject UserService or UserModel to fetch user data
    */
   private async getUserInfo(userId: string): Promise<{ name: string; role: string; profileImage?: string }> {
-    // Placeholder - replace with actual user lookup
-    // Example: return await this.userService.findById(userId);
     return {
       name: 'User',
       role: 'user',
