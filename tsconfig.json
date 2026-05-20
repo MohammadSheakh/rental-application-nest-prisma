@@ -49,7 +49,7 @@
     "src/features/notification.module/**",
     "src/features/authentication/auth/strategies/**",
     "src/features/subscription.module/**",
-    "src/features/settings.module/**",
+    "",
     "src/features/payment.module/**",
     "src/features/socket.gateway/**"
   ]
