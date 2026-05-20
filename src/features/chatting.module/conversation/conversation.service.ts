@@ -1,9 +1,8 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, NotFoundException } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import { Queue } from 'bullmq';
 
 import { PrismaService } from '@app/database';
-import { GenericService } from '@app/common';
 import { REDIS_CLIENT } from '@app/redis';
 import { SocketGateway } from '../../socket.gateway/socket.gateway';
 import { SocketRoomService } from '../../socket.gateway/services/socket-room.service';
@@ -14,11 +13,6 @@ import {
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { ConversationType, ParticipantRole } from './conversation.constant';
 
-/**
- * Conversation Service
- *
- * 📚 CONVERSATION MANAGEMENT SERVICE
- */
 @Injectable()
 export class ConversationService {
   private readonly logger = new Logger(ConversationService.name);
@@ -32,56 +26,36 @@ export class ConversationService {
     @Inject(BULLMQ_NOTIFY_PARTICIPANTS_QUEUE) private notifyParticipantsQueue: Queue,
   ) {}
 
-  /**
-   * Create Conversation
-   *
-   * Creates a new conversation with participants
-   * Checks for existing direct conversations to avoid duplicates
-   */
   async createConversation(
     dto: CreateConversationDto,
     creatorId: string,
   ): Promise<{ conversation: any; created: boolean }> {
     const { participants, message, groupName, groupProfilePicture } = dto;
-
-    // Add creator to participants
     const allParticipants = [...new Set([...participants, creatorId])];
 
     if (allParticipants.length < 2) {
       throw new Error('At least 2 participants required');
     }
 
-    // Determine conversation type
-    const type = allParticipants.length > 2
-      ? ConversationType.GROUP
-      : ConversationType.DIRECT;
+    const type = allParticipants.length > 2 ? ConversationType.GROUP : ConversationType.DIRECT;
 
-    // Check for existing direct conversation
     let existingConversation: any = null;
-
     if (type === ConversationType.DIRECT) {
       existingConversation = await this.findExistingDirectConversation(allParticipants);
     }
 
-    // Create new conversation if not exists
     if (!existingConversation) {
-      const conversationData: any = {
-        creatorId: creatorId,
-        type: type === ConversationType.GROUP ? 'group' : 'direct',
-        ...(type === ConversationType.GROUP && {
+      const conversation = await this.prisma.conversation.create({
+        data: {
+          creatorId,
+          type: type === ConversationType.GROUP ? 'group' : 'direct',
           groupName: groupName || null,
           groupProfilePicture: groupProfilePicture || null,
-        }),
-      };
+        },
+      });
 
-      const conversation = await this.prisma.conversation.create({ data: conversationData });
-
-      this.logger.log(`✅ Conversation created: ${conversation.id} (type: ${type})`);
-
-      // Add participants
       await this.addParticipantsToConversation(conversation.id, allParticipants, creatorId);
 
-      // Send initial message if provided
       if (message) {
         await this.sendMessage(conversation.id, creatorId, message);
       }
@@ -89,7 +63,6 @@ export class ConversationService {
       return { conversation, created: true };
     }
 
-    // Send message to existing conversation
     if (message) {
       await this.sendMessage(existingConversation.id, creatorId, message);
     }
@@ -97,86 +70,127 @@ export class ConversationService {
     return { conversation: existingConversation, created: false };
   }
 
-  /**
-   * Find Existing Direct Conversation
-   */
   private async findExistingDirectConversation(participantIds: string[]): Promise<any | null> {
-    // Implement using Prisma
+    const conversations = await this.prisma.conversation.findMany({
+      where: {
+        type: 'direct',
+        participants: {
+          every: { userId: { in: participantIds } },
+        },
+      },
+      include: { participants: true },
+    });
+
+    for (const conv of conversations) {
+      if (conv.participants.length === participantIds.length) {
+        const participantUserIds = conv.participants.map(p => p.userId).sort();
+        if (JSON.stringify(participantUserIds) === JSON.stringify([...participantIds].sort())) {
+          return conv;
+        }
+      }
+    }
     return null;
   }
 
-  /**
-   * Add Participants to Conversation
-   */
   async addParticipantsToConversation(
     conversationId: string,
     participantIds: string[],
     creatorId: string,
   ): Promise<void> {
-      // Implement using Prisma
+    for (const participantId of participantIds) {
+      const existing = await this.prisma.conversationParticipents.findFirst({
+        where: { userId: participantId, conversationId, isDeleted: false },
+      });
+
+      if (existing) continue;
+
+      const user = await this.getUserInfo(participantId);
+
+      await this.prisma.conversationParticipents.create({
+        data: {
+          conversationId,
+          userId: participantId,
+          userName: user.name,
+          role: user.role === 'admin' ? ParticipantRole.ADMIN : ParticipantRole.MEMBER,
+        },
+      });
+      this.logger.log(`✅ Participant added: ${participantId} to conversation ${conversationId}`);
+    }
   }
 
-  /**
-   * Send Message
-   */
   async sendMessage(
     conversationId: string,
     senderId: string,
     text: string,
     attachments?: string[],
   ): Promise<any> {
-      // Implement using Prisma
-      return {};
+    const message = await this.prisma.message.create({
+      data: {
+        conversationId,
+        senderId,
+        text,
+      },
+    });
+
+    await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: {
+        lastMessageId: message.id,
+        lastMessageText: text,
+        lastMessageCreatedAt: message.createdAt,
+      },
+    });
+
+    await this.conversationLastMessageQueue.add('update-conversation-last-message', {
+      conversationId,
+      lastMessageId: message.id,
+      lastMessage: text,
+    });
+
+    await this.notifyParticipantsInConversation(conversationId, message);
+
+    return message;
   }
 
-  /**
-   * Notify Participants in Conversation
-   */
-  private async notifyParticipantsInConversation(
-    conversationId: string,
-    message: any,
-  ): Promise<void> {
-      // Implement using Prisma
+  private async notifyParticipantsInConversation(conversationId: string, message: any): Promise<void> {
+    const participants = await this.prisma.conversationParticipents.findMany({
+      where: { conversationId, isDeleted: false },
+      select: { userId: true },
+    });
+    const participantIds = participants.map(p => p.userId);
+    const sender = await this.getUserInfo(message.senderId);
+
+    await this.notifyParticipantsQueue.add('notify-participants', {
+      conversationId,
+      messageId: message.id,
+      messageText: message.text,
+      senderId: message.senderId,
+      senderProfile: { name: sender.name, profileImage: sender.profileImage, role: sender.role },
+      participantIds,
+    });
   }
 
-  /**
-   * Get Conversations by User ID with Pagination
-   */
-  async getConversationsByUserId(
-    userId: string,
-    page: number = 1,
-    limit: number = 10,
-    search: string = '',
-  ): Promise<any> {
-      // Implement using Prisma
-      return {};
+  async getConversationsByUserId(userId: string, page: number = 1, limit: number = 10): Promise<any> {
+    const conversations = await this.prisma.conversation.findMany({
+      where: { participants: { some: { userId } } },
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: { lastMessageCreatedAt: 'desc' },
+      include: { participants: true },
+    });
+
+    return conversations;
   }
 
-  /**
-   * Remove Participant from Conversation
-   */
-  async removeParticipant(
-    conversationId: string,
-    participantId: string,
-  ): Promise<void> {
-      // Implement using Prisma
-  }
-
-  /**
-   * Mark Conversation as Read
-   */
   async markAsRead(userId: string, conversationId: string): Promise<void> {
-      // Implement using Prisma
+    await this.prisma.messageReadStatus.updateMany({
+      where: { conversationId, userId },
+      data: { isRead: true, readAt: new Date() },
+    });
   }
 
-  /**
-   * Get User Info (Placeholder)
-   */
   private async getUserInfo(userId: string): Promise<{ name: string; role: string; profileImage?: string }> {
-    return {
-      name: 'User',
-      role: 'user',
-      profileImage: null,
-    };
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true, role: true, profileImageUrl: true } });
+    return { name: user?.name || 'User', role: user?.role || 'user', profileImage: user?.profileImageUrl || undefined };
   }
 }
