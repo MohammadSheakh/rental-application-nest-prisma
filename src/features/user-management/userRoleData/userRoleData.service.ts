@@ -19,9 +19,9 @@ type UserRoleDataRecord = Prisma.UserRoleDataGetPayload<{
 }>;
 
 @Injectable()
-export class UserRoleDataService extends GenericService<any, UserRoleDataRecord> {
+export class UserRoleDataService extends GenericService<Prisma.UserRoleDataDelegate, UserRoleDataRecord> {
   constructor(private readonly prisma: PrismaService) {
-    super((prisma as any).userRoleData, publicUserRoleDataSelect);
+    super(prisma.userRoleData, publicUserRoleDataSelect);
   }
 
   paginate(query: any) {

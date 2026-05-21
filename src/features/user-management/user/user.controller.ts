@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
-import { GenericController, AuthGuard, User as CurrentUser, TransformResponseInterceptor, SlidingWindowRateLimitGuard, RateLimit } from '@app/common';
+import { AuthGuard, User as CurrentUser, TransformResponseInterceptor, SlidingWindowRateLimitGuard, RateLimit } from '@app/common';
 import { UserService } from './user.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import type { UserPayload } from '@app/common';
@@ -18,10 +18,8 @@ import { USER_RATE_LIMITS } from './user.constants';
 /**
  * User Controller
  * 
- * 
- * 
  * Features:
- * ✅ Automatic CRUD via GenericController
+ * ✅ Explicit endpoint definitions
  * ✅ Sliding Window Rate Limiting per endpoint
  * ✅ Role-based access control (via AuthGuard)
  * ✅ Pattern-based Redis caching
@@ -31,10 +29,8 @@ import { USER_RATE_LIMITS } from './user.constants';
 @UseGuards(AuthGuard, SlidingWindowRateLimitGuard)
 @UseInterceptors(TransformResponseInterceptor)
 @ApiBearerAuth()
-export class UserController extends GenericController {
-  constructor(private userService: UserService) {
-    super(userService, 'User');
-  }
+export class UserController {
+  constructor(private readonly userService: UserService) {}
 
   /**
    * GET /users/profile
@@ -78,7 +74,7 @@ export class UserController extends GenericController {
     @CurrentUser() user: UserPayload,
     @Body() updateProfileDto: UpdateProfileDto,
   ) {
-    const updatedUser = await this.userService.updateById(
+    const updatedUser = await this.userService.updateProfile(
       user.userId,
       updateProfileDto,
     );
@@ -86,9 +82,6 @@ export class UserController extends GenericController {
     if (!updatedUser) {
       throw new NotFoundException('User not found');
     }
-
-    // Invalidate cache
-    await this.userService.invalidateCache(user.userId);
 
     return updatedUser;
   }

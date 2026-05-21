@@ -1,5 +1,6 @@
 import { Module, Global } from '@nestjs/common';
 import { RedisProvider, RedisPubProvider, RedisSubProvider } from './redis.provider';
+import { RedisService } from './redis.service';
 
 /**
  * Redis Module
@@ -13,13 +14,14 @@ import { RedisProvider, RedisPubProvider, RedisSubProvider } from './redis.provi
  * ✅ Configurable via environment variables
  * ✅ Automatic reconnection
  * ✅ Health check support
+ * ✅ Centralized RedisService helper
  * 
  * Usage:
- * constructor(@Inject(REDIS_CLIENT) private redisClient: RedisClientType) {}
+ * constructor(private redisService: RedisService) {}
  */
 @Global()
 @Module({
-  providers: [RedisProvider, RedisPubProvider, RedisSubProvider],
-  exports: [RedisProvider, RedisPubProvider, RedisSubProvider],
+  providers: [RedisProvider, RedisPubProvider, RedisSubProvider, RedisService],
+  exports: [RedisProvider, RedisPubProvider, RedisSubProvider, RedisService],
 })
 export class RedisModule {}

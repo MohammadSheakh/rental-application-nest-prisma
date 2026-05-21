@@ -1,11 +1,11 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import Redis from 'ioredis';
 
 import { GenericService } from '@app/common';
-import { REDIS_CLIENT } from '@app/redis';
+import { RedisService } from '@app/redis';
 import { PrismaService } from '@app/database';
 import { USER_CACHE_CONFIG } from './user.constants';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 const publicUserSelect = {
   id: true,
@@ -38,14 +38,14 @@ type UserWithPasswordRecord = Prisma.UserGetPayload<{
 }>;
 
 @Injectable()
-export class UserService extends GenericService<any, PublicUserRecord> {
+export class UserService extends GenericService<Prisma.UserDelegate, PublicUserRecord> {
   private readonly logger = new Logger(UserService.name);
 
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(REDIS_CLIENT) private readonly redisClient: Redis | null,
+    private readonly redisService: RedisService,
   ) {
-    super((prisma as any).user, publicUserSelect);
+    super(prisma.user, publicUserSelect);
   }
 
   /**
@@ -57,11 +57,14 @@ export class UserService extends GenericService<any, PublicUserRecord> {
       : `${USER_CACHE_CONFIG.PREFIX}:stats:${id}`;
   }
 
+  /**
+   * Find by email
+   */
   async findByEmail(
     email: string,
     includePassword = false,
   ): Promise<PublicUserRecord | UserWithPasswordRecord | null> {
-    return await (this.prisma as any).user.findFirst({
+    return await this.prisma.user.findFirst({
       where: {
         email: email.toLowerCase(),
         isDeleted: false,
@@ -71,56 +74,65 @@ export class UserService extends GenericService<any, PublicUserRecord> {
   }
 
   /**
-   * Find by ID with Sliding Window Cache logic
+   * Update user and their profile (nested)
    */
-  async findByIdWithCache(id: string): Promise<PublicUserRecord | null> {
-    const cacheKey = this.getCacheKey('profile', id);
-    
-    try {
-      if (this.redisClient) {
-        const cached = await this.redisClient.get(cacheKey);
-        if (cached) {
-          this.logger.debug(`Cache hit: ${cacheKey}`);
-          return JSON.parse(cached) as PublicUserRecord;
-        }
-      }
-    } catch (err) {
-      this.logger.error(`Redis error: ${err.message}`);
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<PublicUserRecord | null> {
+    const { name, phoneNumber, email, ...profileData } = dto as any;
+
+    const updateData: Prisma.UserUpdateInput = {};
+    if (name) updateData.name = name;
+    if (phoneNumber) updateData.phoneNumber = phoneNumber;
+    if (email) updateData.email = email;
+
+    // Handle nested UserProfile updates
+    if (Object.keys(profileData).length > 0) {
+      updateData.ownedProfile = {
+        upsert: {
+          create: { ...profileData },
+          update: { ...profileData },
+        },
+      };
     }
 
-    const user = await this.findById(id);
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: publicUserSelect,
+    });
 
-    if (user && this.redisClient) {
-      try {
-        await this.redisClient.set(
-          cacheKey, 
-          JSON.stringify(user), 
-          'EX', 
-          USER_CACHE_CONFIG.PROFILE
-        );
-      } catch (err) {
-        this.logger.error(`Redis set error: ${err.message}`);
-      }
+    if (updatedUser) {
+      await this.invalidateCache(userId);
     }
 
-    return user;
+    return updatedUser;
   }
 
   /**
-   * Invalidate cache using senior-level patterns
+   * Find by ID with sliding window cache
    */
-  async invalidateCache(id: string): Promise<void> {
-    if (!this.redisClient) return;
-    
-    try {
-      const keys = USER_CACHE_CONFIG.INVALIDATION_PATTERNS.PROFILE_UPDATED(id);
-      await this.redisClient.del(...keys);
-      this.logger.log(`Invalidated cache for user: ${id}`);
-    } catch (err) {
-      this.logger.error(`Cache invalidation error: ${err.message}`);
-    }
+  async findByIdWithCache(id: string): Promise<PublicUserRecord | null> {
+    return this.redisService.getOrSet(
+      this.getCacheKey('profile', id),
+      () => this.findById(id),
+      USER_CACHE_CONFIG.PROFILE
+    );
   }
 
+  /**
+   * Invalidate cache
+   */
+  async invalidateCache(id: string): Promise<void> {
+    const keys = USER_CACHE_CONFIG.INVALIDATION_PATTERNS.PROFILE_UPDATED(id);
+    await this.redisService.invalidate(keys as any);
+    this.logger.log(`Invalidated cache for user: ${id}`);
+  }
+
+  /**
+   * Update preferred time
+   */
   async updatePreferredTime(
     userId: string,
     preferredTime: string,
@@ -142,44 +154,29 @@ export class UserService extends GenericService<any, PublicUserRecord> {
     completedTasks: number;
     pendingTasks: number;
   }> {
-    const cacheKey = this.getCacheKey('stats', userId);
+    return this.redisService.getOrSet(
+      this.getCacheKey('stats', userId),
+      async () => {
+        const taskDelegate = (this.prisma as any).task;
+        if (!taskDelegate) {
+          return { totalTasks: 0, completedTasks: 0, pendingTasks: 0 };
+        }
 
-    // Try cache
-    if (this.redisClient) {
-      const cached = await this.redisClient.get(cacheKey);
-      if (cached) return JSON.parse(cached);
-    }
+        const baseWhere = {
+          isDeleted: false,
+          OR: [{ ownerUserId: userId }, { assignedUserIds: { has: userId } }],
+        };
 
-    const taskDelegate = (this.prisma as any).task;
+        const [totalTasks, completedTasks, pendingTasks] = await Promise.all([
+          taskDelegate.count({ where: baseWhere }),
+          taskDelegate.count({ where: { ...baseWhere, status: 'completed' } }),
+          taskDelegate.count({ where: { ...baseWhere, status: 'pending' } }),
+        ]);
 
-    if (!taskDelegate) {
-      return { totalTasks: 0, completedTasks: 0, pendingTasks: 0 };
-    }
-
-    const baseWhere = {
-      isDeleted: false,
-      OR: [{ ownerUserId: userId }, { assignedUserIds: { has: userId } }],
-    };
-
-    const [totalTasks, completedTasks, pendingTasks] = await Promise.all([
-      taskDelegate.count({ where: baseWhere }),
-      taskDelegate.count({ where: { ...baseWhere, status: 'completed' } }),
-      taskDelegate.count({ where: { ...baseWhere, status: 'pending' } }),
-    ]);
-
-    const stats = { totalTasks, completedTasks, pendingTasks };
-
-    // Set cache
-    if (this.redisClient) {
-      await this.redisClient.set(
-        cacheKey, 
-        JSON.stringify(stats), 
-        'EX', 
-        USER_CACHE_CONFIG.STATISTICS
-      );
-    }
-
-    return stats;
+        return { totalTasks, completedTasks, pendingTasks };
+      },
+      USER_CACHE_CONFIG.STATISTICS
+    );
   }
 
   async isSecondaryUser(userId: string): Promise<boolean> {

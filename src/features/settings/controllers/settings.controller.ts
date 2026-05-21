@@ -11,9 +11,9 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SettingsService } from '../services/settings.service';
 import { CreateOrUpdateSettingsDto } from '../dto/settings.dto';
-import { SettingsType } from '../../constants/settings.constants';
+import { SettingsType } from '../constants/settings.constants';
 import { AuthGuard, RolesGuard, Roles, TransformResponseInterceptor, SlidingWindowRateLimitGuard, RateLimit } from '@app/common';
-import { SETTINGS_RATE_LIMITS } from '../../constants/settings.cache.constants';
+import { SETTINGS_RATE_LIMITS } from '../constants/settings.cache.constants';
 
 @Controller('settings')
 @ApiTags('Settings')

@@ -19,13 +19,11 @@ const publicUserDeviceSelect = {
  * Extends GenericService for CRUD operations
  */
 @Injectable()
-export class UserDevicesService extends GenericService<any, Partial<UserDevices>> {
+export class UserDevicesService extends GenericService<Prisma.UserDevicesDelegate, Partial<UserDevices>> {
   constructor(
     private readonly prisma: PrismaService,
-    // @InjectModel(UserDevices.name) deviceModel: Model<UserDevicesDocument>,
   ) {
-    // super(deviceModel);
-    super((prisma as any).userDevices, publicUserDeviceSelect);
+    super(prisma.userDevices, publicUserDeviceSelect);
   }
 
   /**

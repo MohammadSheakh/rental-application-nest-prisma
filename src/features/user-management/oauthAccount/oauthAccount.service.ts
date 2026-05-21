@@ -24,13 +24,11 @@ type OAuthAccountRecord = Prisma.OAuthAccountGetPayload<{
  * Extends GenericService for CRUD operations
  */
 @Injectable()
-export class OAuthAccountService extends GenericService<any, OAuthAccountRecord> {
+export class OAuthAccountService extends GenericService<Prisma.OAuthAccountDelegate, OAuthAccountRecord> {
   constructor(
     private readonly prisma: PrismaService,
-    // @InjectModel(OAuthAccount.name) oauthModel: Model<OAuthAccountDocument>,
   ) {
-    // super(oauthModel);
-    super((prisma as any).oauthAccount, publicOAuthAccountSelect);
+    super(prisma.oauthAccount, publicOAuthAccountSelect);
   }
 
   /**
