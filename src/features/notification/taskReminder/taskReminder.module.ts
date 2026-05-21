@@ -1,25 +1,30 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { BullModule } from '@nestjs/bullmq';
-import { TaskReminder, TaskReminderSchema } from './schemas/taskReminder.schema';
-import { Task, TaskSchema } from '../../task.module/task/task.schema';
 import { TaskReminderController } from './controllers/taskReminder.controller';
 import { TaskReminderService } from './services/taskReminder.service';
+import { PrismaModule } from '@app/database';
 
 @Module({
   imports: [
-    /*
-    MongooseModule.forFeature([
-      { name: TaskReminder.name, schema: TaskReminderSchema },
-      { name: Task.name, schema: TaskSchema },
-    ]),
-    */
+    PrismaModule,
     BullModule.registerQueue({
       name: 'taskReminders',
+      connection: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      },
     }),
   ],
   controllers: [TaskReminderController],
-  providers: [TaskReminderService],
+  providers: [
+    TaskReminderService,
+    {
+      provide: 'BullQueue_taskReminders',
+      useFactory: () => {
+        return BullModule.getQueue('taskReminders');
+      },
+    },
+  ],
   exports: [TaskReminderService],
 })
 export class TaskReminderModule {}

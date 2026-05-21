@@ -1,15 +1,14 @@
-import { Module, OnModuleInit, forwardRef } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 
 import { NotificationController } from './notification.controller';
 import { NotificationService } from './notification.service';
-import { Notification, NotificationSchema } from './notification.schema';
 import { TaskReminderModule } from './taskReminder/taskReminder.module';
 
 import { RedisModule } from '@app/redis';
 import { SocketModule } from '../socket.gateway/socket.module';
-import { BULLMQ_NOTIFICATION_QUEUE, QUEUE_NAMES } from '../../core/queue/bullmq.constants';
+import { BULLMQ_NOTIFICATION_QUEUE, QUEUE_NAMES } from '@app/queue';
+import { PrismaModule } from '@app/database';
 
 /**
  * Notification Module
@@ -18,13 +17,8 @@ import { BULLMQ_NOTIFICATION_QUEUE, QUEUE_NAMES } from '../../core/queue/bullmq.
  */
 @Module({
   imports: [
-    // MongoDB - Notification collection
-    /*
-    MongooseModule.forFeature([{
-      name: Notification.name,
-      schema: NotificationSchema,
-    }]),
-    */
+    // Database Module
+    PrismaModule,
 
     // Redis Module (for caching)
     RedisModule,
@@ -67,7 +61,4 @@ import { BULLMQ_NOTIFICATION_QUEUE, QUEUE_NAMES } from '../../core/queue/bullmq.
   ],
   exports: [NotificationService, TaskReminderModule],
 })
-export class NotificationModule {
-  constructor(private notificationService: NotificationService) {}
-}
-
+export class NotificationModule {}

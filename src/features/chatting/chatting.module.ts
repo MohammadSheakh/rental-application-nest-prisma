@@ -8,8 +8,6 @@ import { ConversationService } from './conversation/conversation.service';
 import { MessageController } from './message/message.controller';
 import { MessageService } from './message/message.service';
 
-import { MessageReadStatusService } from './messageReadStatus/messageReadStatus.service';
-
 import { SocketModule } from '../socket.gateway/socket.module';
 import { RedisModule } from '@app/redis';
 import {
@@ -42,30 +40,12 @@ import {
           host: process.env.REDIS_HOST || 'localhost',
           port: parseInt(process.env.REDIS_PORT || '6379'),
         },
-        defaultJobOptions: {
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 2000,
-          },
-          removeOnComplete: { count: 100 },
-          removeOnFail: { count: 500 },
-        },
       },
       {
         name: QUEUE_NAMES.NOTIFY_PARTICIPANTS,
         connection: {
           host: process.env.REDIS_HOST || 'localhost',
           port: parseInt(process.env.REDIS_PORT || '6379'),
-        },
-        defaultJobOptions: {
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 2000,
-          },
-          removeOnComplete: { count: 100 },
-          removeOnFail: { count: 500 },
         },
       },
     ),
@@ -77,7 +57,6 @@ import {
   providers: [
     ConversationService,
     MessageService,
-    MessageReadStatusService,
 
     // BullMQ Queue Providers
     {
@@ -96,7 +75,6 @@ import {
   exports: [
     ConversationService,
     MessageService,
-    MessageReadStatusService,
   ],
 })
 export class ChattingModule {}

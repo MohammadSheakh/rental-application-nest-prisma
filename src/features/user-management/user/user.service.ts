@@ -1,7 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
-import { GenericService } from '@app/common';
 import { RedisService } from '@app/redis';
 import { PrismaService } from '@app/database';
 import { USER_CACHE_CONFIG } from './user.constants';
@@ -38,33 +37,32 @@ type UserWithPasswordRecord = Prisma.UserGetPayload<{
 }>;
 
 @Injectable()
-export class UserService extends GenericService<Prisma.UserDelegate, PublicUserRecord> {
+export class UserService {
   private readonly logger = new Logger(UserService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly redisService: RedisService,
-  ) {
-    super(prisma.user, publicUserSelect);
-  }
+  ) {}
 
-  /**
-   * Cache Key Generator
-   */
   private getCacheKey(type: 'profile' | 'stats', id: string): string {
     return type === 'profile' 
       ? `${USER_CACHE_CONFIG.PREFIX}:${id}` 
       : `${USER_CACHE_CONFIG.PREFIX}:stats:${id}`;
   }
 
-  /**
-   * Find by email
-   */
+  async findById(id: string): Promise<PublicUserRecord | null> {
+    return this.prisma.user.findUnique({
+      where: { id, isDeleted: false },
+      select: publicUserSelect,
+    });
+  }
+
   async findByEmail(
     email: string,
     includePassword = false,
   ): Promise<PublicUserRecord | UserWithPasswordRecord | null> {
-    return await this.prisma.user.findFirst({
+    return this.prisma.user.findFirst({
       where: {
         email: email.toLowerCase(),
         isDeleted: false,
@@ -75,6 +73,7 @@ export class UserService extends GenericService<Prisma.UserDelegate, PublicUserR
 
   /**
    * Update user and their profile (nested)
+   * This is explicit and safe.
    */
   async updateProfile(
     userId: string,
@@ -87,7 +86,6 @@ export class UserService extends GenericService<Prisma.UserDelegate, PublicUserR
     if (phoneNumber) updateData.phoneNumber = phoneNumber;
     if (email) updateData.email = email;
 
-    // Handle nested UserProfile updates
     if (Object.keys(profileData).length > 0) {
       updateData.ownedProfile = {
         upsert: {
@@ -110,9 +108,6 @@ export class UserService extends GenericService<Prisma.UserDelegate, PublicUserR
     return updatedUser;
   }
 
-  /**
-   * Find by ID with sliding window cache
-   */
   async findByIdWithCache(id: string): Promise<PublicUserRecord | null> {
     return this.redisService.getOrSet(
       this.getCacheKey('profile', id),
@@ -121,81 +116,35 @@ export class UserService extends GenericService<Prisma.UserDelegate, PublicUserR
     );
   }
 
-  /**
-   * Invalidate cache
-   */
   async invalidateCache(id: string): Promise<void> {
     const keys = USER_CACHE_CONFIG.INVALIDATION_PATTERNS.PROFILE_UPDATED(id);
     await this.redisService.invalidate(keys as any);
     this.logger.log(`Invalidated cache for user: ${id}`);
   }
 
-  /**
-   * Update preferred time
-   */
-  async updatePreferredTime(
-    userId: string,
-    preferredTime: string,
-  ): Promise<PublicUserRecord | null> {
-    const result = await this.updateById(userId, { preferredTime });
-
-    if (result) {
-      await this.invalidateCache(userId);
-    }
-
+  async updatePreferredTime(userId: string, preferredTime: string): Promise<PublicUserRecord | null> {
+    const result = await this.prisma.user.update({
+      where: { id: userId },
+      data: { preferredTime },
+      select: publicUserSelect,
+    });
+    if (result) await this.invalidateCache(userId);
     return result;
   }
 
-  /**
-   * Get statistics with caching
-   */
-  async getUserStatistics(userId: string): Promise<{
-    totalTasks: number;
-    completedTasks: number;
-    pendingTasks: number;
-  }> {
+  async getUserStatistics(userId: string) {
     return this.redisService.getOrSet(
       this.getCacheKey('stats', userId),
       async () => {
-        const taskDelegate = (this.prisma as any).task;
-        if (!taskDelegate) {
-          return { totalTasks: 0, completedTasks: 0, pendingTasks: 0 };
-        }
-
+        // Example: Only counting what exists in the schema
         const baseWhere = {
           isDeleted: false,
-          OR: [{ ownerUserId: userId }, { assignedUserIds: { has: userId } }],
+          OR: [{ accountCreatorId: userId }], // Adjusted to actual schema relations
         };
-
-        const [totalTasks, completedTasks, pendingTasks] = await Promise.all([
-          taskDelegate.count({ where: baseWhere }),
-          taskDelegate.count({ where: { ...baseWhere, status: 'completed' } }),
-          taskDelegate.count({ where: { ...baseWhere, status: 'pending' } }),
-        ]);
-
-        return { totalTasks, completedTasks, pendingTasks };
+        const totalChildren = await this.prisma.user.count({ where: baseWhere });
+        return { totalChildren };
       },
       USER_CACHE_CONFIG.STATISTICS
     );
-  }
-
-  async isSecondaryUser(userId: string): Promise<boolean> {
-    const relationshipDelegate = (this.prisma as any).childrenBusinessUser;
-
-    if (!relationshipDelegate) {
-      return false;
-    }
-
-    const relationship = await relationshipDelegate.findFirst({
-      where: {
-        childUserId: userId,
-        isSecondaryUser: true,
-        status: 'active',
-        isDeleted: false,
-      },
-      select: { id: true },
-    });
-
-    return !!relationship;
   }
 }
