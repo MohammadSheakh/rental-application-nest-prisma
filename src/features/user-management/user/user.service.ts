@@ -111,9 +111,13 @@ export class UserService {
   async findByIdWithCache(id: string): Promise<PublicUserRecord | null> {
     return this.redisService.getOrSet(
       this.getCacheKey('profile', id),
-      () => this.findById(id),
+      () => this.fetchUserById(id),
       USER_CACHE_CONFIG.PROFILE
     );
+  }
+
+  private async fetchUserById(id: string): Promise<PublicUserRecord | null> {
+    return this.findById(id);
   }
 
   async invalidateCache(id: string): Promise<void> {
@@ -135,16 +139,17 @@ export class UserService {
   async getUserStatistics(userId: string) {
     return this.redisService.getOrSet(
       this.getCacheKey('stats', userId),
-      async () => {
-        // Example: Only counting what exists in the schema
-        const baseWhere = {
-          isDeleted: false,
-          OR: [{ accountCreatorId: userId }], // Adjusted to actual schema relations
-        };
-        const totalChildren = await this.prisma.user.count({ where: baseWhere });
-        return { totalChildren };
-      },
+      () => this.fetchUserStatistics(userId),
       USER_CACHE_CONFIG.STATISTICS
     );
+  }
+
+  private async fetchUserStatistics(userId: string) {
+    const baseWhere = {
+      isDeleted: false,
+      OR: [{ accountCreatorId: userId }], 
+    };
+    const totalChildren = await this.prisma.user.count({ where: baseWhere });
+    return { totalChildren };
   }
 }

@@ -43,11 +43,15 @@ export class UserProfileService extends GenericService<Prisma.UserProfileDelegat
   async findByUserIdWithCache(userId: string): Promise<UserProfile | null> {
     return this.redisService.getOrSet(
       this.getCacheKey(userId),
-      () => this.prisma.userProfile.findFirst({
-        where: { userId, isDeleted: false },
-      }),
+      () => this.fetchProfileByUserId(userId),
       USER_CACHE_CONFIG.PROFILE
     );
+  }
+
+  private async fetchProfileByUserId(userId: string) {
+    return this.prisma.userProfile.findFirst({
+      where: { userId, isDeleted: false },
+    });
   }
 
   /**

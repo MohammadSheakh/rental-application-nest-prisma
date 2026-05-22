@@ -37,6 +37,17 @@ export class NotificationController {
   constructor(private notificationService: NotificationService) {}
 
   /**
+   * GET /notifications/types
+   * Get all available notification types
+   */
+  @Get('types')
+  @ApiOperation({ summary: 'Get all notification types' })
+  @ApiResponse({ status: 200, description: 'Notification types retrieved successfully' })
+  async getNotificationTypes() {
+    return { types: this.notificationService.getAllNotificationTypes() };
+  }
+
+  /**
    * GET /notifications
    * Get user's notifications with pagination
    */

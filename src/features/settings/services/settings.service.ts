@@ -43,13 +43,15 @@ export class SettingsService {
   async getSettingsByType(type: SettingsType) {
     return this.redisService.getOrSet(
       this.getCacheKey(type),
-      async () => {
-        const settings = await this.prisma.settings.findUnique({ where: { type } });
-        if (!settings) throw new NotFoundException(`Settings not found: ${type}`);
-        return settings;
-      },
+      () => this.fetchSettings(type),
       SETTINGS_CACHE_CONFIG.TTL
     );
+  }
+
+  private async fetchSettings(type: SettingsType) {
+    const settings = await this.prisma.settings.findUnique({ where: { type } });
+    if (!settings) throw new NotFoundException(`Settings not found: ${type}`);
+    return [settings];
   }
 
   async getAllSettings() {

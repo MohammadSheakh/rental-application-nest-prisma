@@ -6,7 +6,8 @@ import { RedisService } from '@app/redis';
 import { BULLMQ_NOTIFICATION_QUEUE } from '@app/queue';
 import { SocketGateway } from '../socket.gateway/socket.gateway';
 import { SendNotificationDto, EnqueueNotificationDto, BroadcastNotificationDto } from './dto/notification.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, NotificationType } from '@prisma/client';
+import { REDIS_NOTIFICATION_UNREAD_PREFIX, UNREAD_COUNT_CACHE_TTL } from './notification.constants';
 
 @Injectable()
 export class NotificationService {
@@ -149,27 +150,28 @@ export class NotificationService {
    * Get unread count
    */
   async getUnreadCount(userId: string): Promise<number> {
-    const cacheKey = `notification:unread:${userId}`;
-    const client = await this.redisService.getClient();
+    return this.redisService.getOrSet(
+      `${REDIS_NOTIFICATION_UNREAD_PREFIX}${userId}`,
+      () => this.fetchUnreadCount(userId),
+      UNREAD_COUNT_CACHE_TTL
+    );
+  }
 
-    if (client) {
-      const cached = await client.get(cacheKey);
-      if (cached) return parseInt(cached, 10);
-    }
-
-    const count = await this.prisma.notification.count({
+  private async fetchUnreadCount(userId: string): Promise<number> {
+    return this.prisma.notification.count({
       where: {
         receiverId: userId,
         isRead: false,
         isDeleted: false,
       },
     });
+  }
 
-    if (client) {
-      await client.set(cacheKey, count.toString(), 'EX', 300);
-    }
-
-    return count;
+  /**
+   * Get all notification types
+   */
+  getAllNotificationTypes() {
+    return Object.values(NotificationType);
   }
 
   /**
@@ -204,7 +206,7 @@ export class NotificationService {
       },
     });
 
-    await this.redisService.invalidate(`notification:unread:${userId}`);
+    await this.redisService.invalidate(`${REDIS_NOTIFICATION_UNREAD_PREFIX}${userId}`);
 
     return { modifiedCount: result.count };
   }
@@ -257,18 +259,18 @@ export class NotificationService {
   private async incrementUnreadCount(userId: string): Promise<void> {
     const client = await this.redisService.getClient();
     if (client) {
-      const cacheKey = `notification:unread:${userId}`;
+      const cacheKey = `${REDIS_NOTIFICATION_UNREAD_PREFIX}${userId}`;
       await client.incr(cacheKey);
-      await client.expire(cacheKey, 300);
+      await client.expire(cacheKey, UNREAD_COUNT_CACHE_TTL);
     }
   }
 
   private async decrementUnreadCount(userId: string): Promise<void> {
     const client = await this.redisService.getClient();
     if (client) {
-      const cacheKey = `notification:unread:${userId}`;
+      const cacheKey = `${REDIS_NOTIFICATION_UNREAD_PREFIX}${userId}`;
       await client.decr(cacheKey);
-      await client.expire(cacheKey, 300);
+      await client.expire(cacheKey, UNREAD_COUNT_CACHE_TTL);
     }
   }
 }
