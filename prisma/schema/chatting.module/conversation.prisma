@@ -36,6 +36,7 @@ model Conversation {
   // 🔗 One conversation can have many read-status rows.
   readStatuses MessageReadStatus[]
 
+
   @@index([creatorId, isDeleted])
   @@index([type, isDeleted])
   @@index([lastMessageCreatedAt, isDeleted])

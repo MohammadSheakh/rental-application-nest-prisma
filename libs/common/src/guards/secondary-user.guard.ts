@@ -5,7 +5,8 @@ import {
   ForbiddenException,
   Inject,
 } from '@nestjs/common';
-import { IUserService, I_USER_SERVICE } from '../types/user-service.interface';
+import type { IUserService } from '../types/user-service.interface';
+import { I_USER_SERVICE } from '../types/user-service.interface';
 
 /**
  * Secondary User Guard

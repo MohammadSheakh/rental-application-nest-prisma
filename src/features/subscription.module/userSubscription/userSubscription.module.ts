@@ -16,11 +16,11 @@ import { SubscriptionPlanModule } from '../subscriptionPlan/subscriptionPlan.mod
 @Module({
   imports: [
      // MongooseModule.forFeature([
-      {
-        name: UserSubscription.name,
-        schema: UserSubscriptionSchema,
-      },
-    ]),
+    //   {
+    //     name: UserSubscription.name,
+    //     schema: UserSubscriptionSchema,
+    //   },
+    // ]),
     UserModule,
     SubscriptionPlanModule,
   ],
@@ -28,11 +28,11 @@ import { SubscriptionPlanModule } from '../subscriptionPlan/subscriptionPlan.mod
   providers: [UserSubscriptionService],
   exports: [
      // MongooseModule.forFeature([
-      {
-        name: UserSubscription.name,
-        schema: UserSubscriptionSchema,
-      },
-    ]),
+    //   {
+    //     name: UserSubscription.name,
+    //     schema: UserSubscriptionSchema,
+    //   },
+    // ]),
     UserSubscriptionService,
   ],
 })

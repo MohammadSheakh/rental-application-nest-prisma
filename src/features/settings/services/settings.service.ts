@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Prisma, Settings } from '@prisma/client';
 import { PrismaService } from '@app/database';
 import { RedisService } from '@app/redis';
 import { SettingsType } from '../constants/settings.constants';
@@ -20,21 +21,30 @@ export class SettingsService {
     return `${SETTINGS_CACHE_CONFIG.PREFIX}:${type}`;
   }
 
-  async createOrUpdateSettings(type: SettingsType, dto: CreateOrUpdateSettingsDto) {
+  async createOrUpdateSettings(
+    type: SettingsType,
+    dto: CreateOrUpdateSettingsDto,
+  ) {
     this.logger.log(`Creating/updating settings for type: ${type}`);
-    const result = await this.prisma.settings.upsert({
+
+    const updateData: Prisma.SettingsUpdateInput = {};
+    if (dto.details !== undefined) {
+      updateData.details = dto.details;
+    }
+    if (dto.introductionVideo !== undefined) {
+      updateData.introductionVideo = dto.introductionVideo as Prisma.InputJsonValue;
+    }
+
+    const result: Settings = await this.prisma.settings.upsert({
       where: { type },
-      update: { 
-        details: dto.details, 
-        introductionVideo: dto.introductionVideo as any 
-      },
-      create: { 
-        type, 
-        details: dto.details || '', 
-        introductionVideo: dto.introductionVideo as any 
+      update: updateData,
+      create: {
+        type,
+        details: dto.details || '',
+        introductionVideo: (dto.introductionVideo as Prisma.InputJsonValue) ?? null,
       },
     });
-    
+
     // Invalidate cache
     await this.invalidateCache(type);
     return result;
@@ -44,7 +54,7 @@ export class SettingsService {
     return this.redisService.getOrSet(
       this.getCacheKey(type),
       () => this.fetchSettings(type),
-      SETTINGS_CACHE_CONFIG.TTL
+      SETTINGS_CACHE_CONFIG.TTL,
     );
   }
 

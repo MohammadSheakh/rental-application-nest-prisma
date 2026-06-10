@@ -1,11 +1,14 @@
-import { Document, Model, FilterQuery, UpdateQuery, QueryOptions } from 'mongoose';
 import { PaginateOptions, PaginateResult } from '../shared/types/paginate';
 
 /**
  * Base Entity Interface
- * All entities should extend this
+ * Prisma-only build: keep a lightweight shared contract without Mongoose types.
  */
-export interface IBaseEntity extends Document {
+type FilterQuery<T> = Record<string, unknown>;
+type UpdateQuery<T> = Partial<T>;
+type QueryOptions = Record<string, unknown>;
+
+export interface IBaseEntity {
   _id: any;
   createdAt?: Date;
   updatedAt?: Date;

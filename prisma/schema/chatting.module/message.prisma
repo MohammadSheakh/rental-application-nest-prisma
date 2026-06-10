@@ -13,7 +13,7 @@ model Message {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  // 🔗 Many-to-many: one message can include many attachments.
+  // 🔗 One-to-many: one message can include many attachments.
   attachments  Attachment[]
 
   // 🔗 One message can have many read-status rows, one per reader.

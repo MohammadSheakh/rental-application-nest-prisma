@@ -1,7 +1,8 @@
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
-import { getRedisOptions } from '../database/redis/redis.provider';
+// import { getRedisOptions } from '../database/redis/redis.provider';
 import { QUEUE_NAMES } from './bullmq.constants';
+import { getRedisOptions } from '@app/redis';
 
 /**
  * BullMQ Queues Registration

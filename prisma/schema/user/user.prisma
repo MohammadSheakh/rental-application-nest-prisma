@@ -8,7 +8,6 @@ model User {
   phoneNumber         String?
   isEmailVerified     Boolean          @default(false)
   authProvider        UserAuthProvider @default(local)
-  preferredTime       String           @default("07:00")
   isResetPassword     Boolean          @default(false)
   failedLoginAttempts Int              @default(0)
   lockUntil           DateTime?
@@ -53,9 +52,6 @@ model User {
   // 🔗 One user can have many role-specific data records.
   roleData UserRoleData[]
 
-  // 🔗 One user can upload many attachments.
-  uploadedAttachments Attachment[] @relation("AttachmentUploader")
-
   // 🔗 One user can create many conversations.
   createdConversations Conversation[] @relation("ConversationCreator")
 
@@ -74,12 +70,7 @@ model User {
   // 🔗 One user can receive many notifications.
   receivedNotifications Notification[] @relation("NotificationReceiver")
 
-  // 🔗 One user can have many task reminders.
-  taskReminders TaskReminder[] @relation("TaskReminderUser")
-
-  // 🔗 One user can create many task reminders for themselves or others.
-  createdTaskReminders TaskReminder[] @relation("TaskReminderCreator")
-
+  
   // 🔗 One user can have many payment transactions.
   paymentTransactions PaymentTransaction[]
 

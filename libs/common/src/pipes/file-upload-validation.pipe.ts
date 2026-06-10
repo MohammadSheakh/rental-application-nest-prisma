@@ -4,7 +4,6 @@ import {
   Injectable,
   PipeTransform,
 } from '@nestjs/common';
-import { FileFieldConfig } from '../attachment.module/attachment.schema';
 
 /**
  * File Upload Validation Pipe

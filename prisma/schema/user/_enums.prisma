@@ -2,8 +2,7 @@
 
 enum UserRole {
   admin
-  business
-  child
+  user
 }
 
 enum UserAuthProvider {

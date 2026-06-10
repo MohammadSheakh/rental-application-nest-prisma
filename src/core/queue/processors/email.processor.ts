@@ -32,7 +32,8 @@ export class EmailProcessor extends WorkerHost {
         case 'send-password-reset-confirmation':
           return await this.emailService.sendPasswordResetConfirmationNow(job.data.email);
         case 'send-task-notification':
-          return await this.emailService.sendTaskNotificationEmailNow(job.data.email, job.data.taskTitle, job.data.type);
+          this.logger.warn(`Task notification email is not implemented in the current EmailService`);
+          return undefined;
         default:
           this.logger.warn(`Unknown job name: ${job.name}`);
       }

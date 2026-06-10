@@ -17,11 +17,11 @@ import { PaymentTransactionModule } from '../../payment.module/paymentTransactio
 @Module({
   imports: [
      // MongooseModule.forFeature([
-      {
-        name: UserSubscription.name,
-        schema: UserSubscriptionSchema,
-      },
-    ]),
+      //   {
+      //     name: UserSubscription.name,
+      //     schema: UserSubscriptionSchema,
+      //   },
+      // ]),
     PaymentTransactionModule,
   ],
   controllers: [RevenueCatController, RevenueCatWebhookController],

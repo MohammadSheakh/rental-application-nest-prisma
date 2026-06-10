@@ -1,13 +1,6 @@
 import { IsEmail, IsNotEmpty, IsString, MinLength, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-
-/**
- * User Role Enum
- */
-export enum UserRole {
-  BUSINESS = 'business',
-  CHILD = 'child',
-}
+import { UserRole } from '@prisma/client';
 
 /**
  * Register DTO
@@ -41,11 +34,11 @@ export class RegisterDto {
   password: string;
 
   @ApiProperty({
-    example: 'business',
+    example: 'user',
     description: 'User role',
     enum: UserRole,
   })
-  @IsEnum(UserRole, { message: 'Role must be business or child' })
+  @IsEnum(UserRole, { message: 'Role must be admin or user' })
   @IsNotEmpty({ message: 'Role is required' })
   role: UserRole;
 

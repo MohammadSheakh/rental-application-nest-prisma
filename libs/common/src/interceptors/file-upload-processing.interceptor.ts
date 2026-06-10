@@ -44,26 +44,14 @@ export class FileUploadProcessingInterceptor implements NestInterceptor {
     }
 
     try {
-      // Upload files to cloud storage
-      const attachmentService = new AttachmentService(
-        // TODO: Inject properly via module
-        null as any,
-        null as any,
-      );
-
-      const uploadPromises = files.map((file) =>
-        attachmentService.uploadSingleAttachment(file, this.folder),
-      );
-
-      const attachmentIds = await Promise.all(uploadPromises);
-
-      // Store in request for controller access
+      // Prisma-only build: keep the pipeline pass-through and preserve the
+      // uploaded file metadata for controllers that still expect it.
       request.uploadedFiles = {
-        [this.fieldName]: attachmentIds,
+        [this.fieldName]: files,
       };
 
       // Also store in body for DTO validation
-      request.body[this.fieldName] = attachmentIds;
+      request.body[this.fieldName] = files;
 
       return next.handle().pipe(
         map((data) => ({
@@ -73,7 +61,7 @@ export class FileUploadProcessingInterceptor implements NestInterceptor {
       );
     } catch (error) {
       throw new BadRequestException(
-        `Failed to upload files: ${error.message}`,
+        `Failed to upload files: ${(error as Error).message}`,
       );
     }
   }

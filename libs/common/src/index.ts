@@ -7,7 +7,7 @@ export * from './decorators/use-file-upload-pipeline.decorator';
 
 // Filters
 export * from './filters/http-exception.filter';
-export * from './filters/mongoose-exception.filter';
+// export * from './filters/mongoose-exception.filter';
 
 // Guards
 export * from './guards/auth.guard';
@@ -38,4 +38,4 @@ export * from './generic/generic.service';
 export * from './generic/generic.controller';
 
 // Base
-export * from './base/base.entity';
+// export * from './base/base.entity';

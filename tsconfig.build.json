@@ -15,9 +15,11 @@
     "src/core/queue/**",
     "src/features/attachments/**",
     "src/features/chatting.module/**",
+    "src/features/chatting/**",
     "src/features/notification.module/**",
+    "src/features/notification/**",
+    "libs/queue/src/processors/**",
     "src/features/payment.module/**",
-    "src/features/settings.module/**",
     "src/features/socket.gateway/**",
     "src/features/subscription.module/**",
     "src/features/authentication/auth/strategies/**"

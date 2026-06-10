@@ -11,3 +11,13 @@ pnpm prisma generate --schema prisma/schema.prisma
 
 // watch nvidia gpu .. 
 watch -n 1 nvidia-smi
+
+
+// npx skills add -y https://docs.stripe.com
+
+
+For Start
+> sudo service redis-server start 
+
+> sudo systemctl start redis
+> sudo systemctl start redis-server

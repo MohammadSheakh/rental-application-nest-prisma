@@ -7,6 +7,14 @@ export const SETTINGS_CACHE_CONFIG = {
 };
 
 export const SETTINGS_RATE_LIMITS = {
-  GET_SETTINGS: { limit: 100, window: 60 },
-  MANAGE_SETTINGS: { limit: 10, window: 60 },
-};
+  GET_SETTINGS: {
+    windowMs: 60 * 1000,
+    max: 100,
+    keyPrefix: 'settings_get',
+  },
+  MANAGE_SETTINGS: {
+    windowMs: 60 * 1000,
+    max: 10,
+    keyPrefix: 'settings_manage',
+  },
+} as const;

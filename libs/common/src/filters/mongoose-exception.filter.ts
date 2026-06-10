@@ -6,24 +6,12 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
-import {
-  CastError,
-  ValidationError as MongooseValidationError,
-  Error as MongooseError,
-} from 'mongoose';
 
 /**
- * Mongoose Exception Filter
+ * Database Exception Filter
+ * Prisma-only build: keep the filter behavior generic and avoid Mongoose types.
  * 
  * 📚 INDUSTRY STANDARD IMPLEMENTATION
- * 
- * Catches Mongoose-specific exceptions and returns user-friendly errors:
- * - CastError (invalid ObjectId)
- * - ValidationError (schema validation failed)
- * - DuplicateKeyError (unique constraint violation)
- * - NotFoundError (document not found)
- * - MongoServerError (database errors)
- * - MongoNetworkError (network issues)
  * 
  * Features:
  * ✅ User-friendly error messages
@@ -31,11 +19,11 @@ import {
  * ✅ Detailed logging
  * ✅ Development stack traces
  */
-@Catch(MongooseError)
+@Catch()
 export class MongooseExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(MongooseExceptionFilter.name);
 
-  catch(exception: MongooseError, host: ArgumentsHost) {
+  catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
@@ -44,45 +32,46 @@ export class MongooseExceptionFilter implements ExceptionFilter {
     let message = 'Database error occurred';
     let error = 'Database Error';
 
-    // Handle CastError (invalid ObjectId)
-    if (exception instanceof CastError) {
-      status = HttpStatus.BAD_REQUEST;
-      message = `Invalid ${exception.path}: ${exception.value}`;
-      error = 'Cast Error';
-    }
+    const errorObject = exception as any;
 
-    // Handle ValidationError
-    if (exception instanceof MongooseValidationError) {
-      status = HttpStatus.BAD_REQUEST;
-      const errors = Object.values(exception.errors).map((err: any) => err.message);
-      message = errors.join(', ');
-      error = 'Validation Error';
-    }
-
-    // Handle DuplicateKeyError (code 11000)
-    if ((exception as any).code === 11000) {
+    // Prisma databases often surface structured errors with a code field.
+    if (errorObject?.code === 'P2002' || errorObject?.code === 11000) {
       status = HttpStatus.CONFLICT;
-      const field = Object.keys((exception as any).keyValue)[0];
-      message = `${field} already exists`;
+      const field = Object.keys(errorObject?.meta?.target || errorObject?.keyValue || {})[0];
+      message = field ? `${field} already exists` : 'Record already exists';
       error = 'Duplicate Key Error';
     }
 
-    // Handle MongoServerError (connection, authentication, etc.)
-    if (exception.name === 'MongoServerError') {
+    if (errorObject?.code === 'P2025') {
+      status = HttpStatus.NOT_FOUND;
+      message = 'Record not found';
+      error = 'Not Found';
+    }
+
+    if (errorObject?.name === 'PrismaClientKnownRequestError') {
+      status = HttpStatus.BAD_REQUEST;
+      message = errorObject?.message || message;
+      error = 'Database Error';
+    }
+
+    if (exception instanceof Error && message === 'Database error occurred') {
+      message = exception.message;
+      error = exception.name || error;
+    }
+
+    if (errorObject?.name === 'MongoServerError') {
       status = HttpStatus.SERVICE_UNAVAILABLE;
       message = 'Database service unavailable';
       error = 'Database Unavailable';
     }
 
-    // Handle MongoNetworkError (network connectivity)
-    if (exception.name === 'MongoNetworkError') {
+    if (errorObject?.name === 'MongoNetworkError') {
       status = HttpStatus.SERVICE_UNAVAILABLE;
       message = 'Cannot connect to database';
       error = 'Network Error';
     }
 
-    // Handle MongoTimeoutError
-    if (exception.name === 'MongoTimeoutError') {
+    if (errorObject?.name === 'MongoTimeoutError') {
       status = HttpStatus.GATEWAY_TIMEOUT;
       message = 'Database operation timed out';
       error = 'Timeout Error';
@@ -95,7 +84,7 @@ export class MongooseExceptionFilter implements ExceptionFilter {
     // Log error with context
     this.logger.error(
       `${request.method} ${request.url} ${status} - ${message} - User: ${userId}`,
-      exception.stack,
+      exception instanceof Error ? exception.stack : undefined,
     );
 
     // Build response body
@@ -110,7 +99,7 @@ export class MongooseExceptionFilter implements ExceptionFilter {
 
     // Include stack trace in development mode
     if (process.env.NODE_ENV === 'development') {
-      responseBody.stack = exception.stack;
+      responseBody.stack = exception instanceof Error ? exception.stack : undefined;
     }
 
     response.status(status).json(responseBody);

@@ -10,7 +10,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 
 import { UserProfileService } from './userProfile.service';
 import { UpdateUserProfileDto } from './dto/update-userProfile.dto';
-import { AuthGuard, UserPayload as CurrentUser, TransformResponseInterceptor } from '@app/common';
+import { AuthGuard, User, TransformResponseInterceptor } from '@app/common';
 import type { UserPayload } from '@app/common';
 
 /**
@@ -36,7 +36,7 @@ export class UserProfileController {
     description: 'Get current user profile with extended information',
   })
   @ApiResponse({ status: 200, description: 'Profile details retrieved successfully' })
-  async getProfileDetails(@CurrentUser() user: UserPayload) {
+  async getProfileDetails(@User() user: UserPayload) {
     return await this.userProfileService.findByUserIdWithCache(user.userId);
   }
 
@@ -51,7 +51,7 @@ export class UserProfileController {
   })
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   async updateProfileDetails(
-    @CurrentUser() user: UserPayload,
+    @User() user: UserPayload,
     @Body() updateProfileDto: UpdateUserProfileDto,
   ) {
     return await this.userProfileService.updateByUserId(user.userId, updateProfileDto);
@@ -68,7 +68,7 @@ export class UserProfileController {
   })
   @ApiResponse({ status: 200, description: 'Support mode updated successfully' })
   async updateSupportMode(
-    @CurrentUser() user: UserPayload,
+    @User() user: UserPayload,
     @Body('supportMode') supportMode: string,
   ) {
     return await this.userProfileService.updateSupportMode(user.userId, supportMode);
@@ -85,7 +85,7 @@ export class UserProfileController {
   })
   @ApiResponse({ status: 200, description: 'Notification style updated successfully' })
   async updateNotificationStyle(
-    @CurrentUser() user: UserPayload,
+    @User() user: UserPayload,
     @Body('notificationStyle') notificationStyle: string,
   ) {
     return await this.userProfileService.updateNotificationStyle(user.userId, notificationStyle);
@@ -101,7 +101,7 @@ export class UserProfileController {
     description: 'Get user profile with user details',
   })
   @ApiResponse({ status: 200, description: 'Full profile retrieved successfully' })
-  async getFullProfile(@CurrentUser() user: UserPayload) {
+  async getFullProfile(@User() user: UserPayload) {
     return await this.userProfileService.getProfileWithUser(user.userId);
   }
 }

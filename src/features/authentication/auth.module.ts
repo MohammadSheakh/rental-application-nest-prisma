@@ -9,7 +9,6 @@ import { AuthService } from './auth/auth.service';
 import { OtpService } from './otp/otp.service';
 import { EmailService } from './email/email.service';
 import { OAuthVerificationService } from './oauth/oauth-verification.service';
-import { EmailProcessor } from 'src/core/queue/processors/email.processor';
 
 /**
  * Auth Module
@@ -51,7 +50,6 @@ import { EmailProcessor } from 'src/core/queue/processors/email.processor';
     OtpService,
     EmailService,
     OAuthVerificationService,
-    EmailProcessor,
   ],
   exports: [AuthService, JwtModule],
 })

@@ -13,7 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@ne
 
 import { UserDevicesService } from './userDevices.service';
 import { RegisterDeviceDto } from './dto/register-device.dto';
-import { AuthGuard, UserPayload as CurrentUser, TransformResponseInterceptor } from '@app/common';
+import { AuthGuard, User, TransformResponseInterceptor } from '@app/common';
 import type { UserPayload } from '@app/common';
 
 /**
@@ -40,7 +40,7 @@ export class UserDevicesController {
   })
   @ApiResponse({ status: 201, description: 'Device registered successfully' })
   async registerDevice(
-    @CurrentUser() user: UserPayload,
+    @User() user: UserPayload,
     @Body() registerDeviceDto: RegisterDeviceDto,
   ) {
     return await this.userDevicesService.registerOrUpdateDevice(
@@ -61,7 +61,7 @@ export class UserDevicesController {
     description: 'Get all registered devices for current user',
   })
   @ApiResponse({ status: 200, description: 'Devices retrieved successfully' })
-  async getUserDevices(@CurrentUser() user: UserPayload) {
+  async getUserDevices(@User() user: UserPayload) {
     return await this.userDevicesService.getUserDevices(user.userId);
   }
 
@@ -78,7 +78,7 @@ export class UserDevicesController {
   @ApiResponse({ status: 200, description: 'Device removed successfully' })
   @ApiResponse({ status: 404, description: 'Device not found' })
   async removeDevice(
-    @CurrentUser() user: UserPayload,
+    @User() user: UserPayload,
     @Param('deviceId') deviceId: string,
   ) {
     return await this.userDevicesService.removeDevice(user.userId, deviceId);
@@ -96,7 +96,7 @@ export class UserDevicesController {
   @ApiParam({ name: 'deviceId', description: 'Device ID' })
   @ApiResponse({ status: 200, description: 'Push settings updated successfully' })
   async updatePushSettings(
-    @CurrentUser() user: UserPayload,
+    @User() user: UserPayload,
     @Param('deviceId') deviceId: string,
     @Body('enabled') enabled: boolean,
   ) {
@@ -114,7 +114,7 @@ export class UserDevicesController {
   })
   @ApiResponse({ status: 200, description: 'Device removed successfully' })
   async removeDeviceByToken(
-    @CurrentUser() user: UserPayload,
+    @User() user: UserPayload,
     @Body('fcmToken') fcmToken: string,
   ) {
     await this.userDevicesService.removeDeviceByToken(user.userId, fcmToken);

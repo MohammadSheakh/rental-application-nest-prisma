@@ -15,22 +15,22 @@ import { UserModule } from '../../user.module/user.module';
 @Module({
   imports: [
      // MongooseModule.forFeature([
-      {
-        name: SubscriptionPlan.name,
-        schema: SubscriptionPlanSchema,
-      },
-    ]),
+    //   {
+    //     name: SubscriptionPlan.name,
+    //     schema: SubscriptionPlanSchema,
+    //   },
+    // ]),
     UserModule, // For Stripe customer management
   ],
   controllers: [SubscriptionPlanController],
   providers: [SubscriptionPlanService],
   exports: [
      // MongooseModule.forFeature([
-      {
-        name: SubscriptionPlan.name,
-        schema: SubscriptionPlanSchema,
-      },
-    ]),
+    //   {
+    //     name: SubscriptionPlan.name,
+    //     schema: SubscriptionPlanSchema,
+    //   },
+    // ]),
     SubscriptionPlanService,
   ],
 })
