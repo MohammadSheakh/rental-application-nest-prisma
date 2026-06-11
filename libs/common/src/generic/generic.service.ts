@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PaginateOptions, PaginateResult } from '../shared/types/paginate';
+import { cleanFilters, parseSort, buildProjection } from '../utils/prisma.utils';
 
 type PrismaDelegate<TRecord = any> = {
   findUnique(args: any): Promise<TRecord | null>;
@@ -145,41 +146,19 @@ export class GenericService<TDelegate = any, TRecord = any> {
     include?: Record<string, any>,
     select?: Record<string, boolean>,
   ): Record<string, any> {
-    if (include) {
-      return { include };
-    }
-
-    if (select) {
-      return { select };
-    }
-
-    if (this.defaultSelect) {
+    const projection = buildProjection(include, select);
+    if (Object.keys(projection).length === 0 && this.defaultSelect) {
       return { select: this.defaultSelect };
     }
-
-    return {};
+    return projection;
   }
 
   protected cleanFilters(filters: Record<string, any>): Record<string, any> {
-    const controlKeys = new Set(['page', 'limit', 'sortBy', 'include', 'populate', 'select']);
-    return Object.fromEntries(
-      Object.entries(filters).filter((entry) => {
-        const [key, value] = entry;
-        return !controlKeys.has(key) && value !== undefined && value !== '';
-      }),
-    );
+    return cleanFilters(filters);
   }
 
   protected parseSort(sortBy?: string): Record<string, 'asc' | 'desc'> | undefined {
-    if (!sortBy) {
-      return { createdAt: 'desc' };
-    }
-
-    if (sortBy.startsWith('-')) {
-      return { [sortBy.slice(1)]: 'desc' };
-    }
-
-    return { [sortBy]: 'asc' };
+    return parseSort(sortBy);
   }
 
   protected validateId(id: string): void {

@@ -36,6 +36,7 @@ export * from './constants/redis.constants';
 // Generic
 export * from './generic/generic.service';
 export * from './generic/generic.controller';
+export * from './utils/prisma.utils';
 
 // Base
 // export * from './base/base.entity';

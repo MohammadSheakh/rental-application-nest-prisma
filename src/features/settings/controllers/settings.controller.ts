@@ -17,7 +17,11 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { SettingsService } from '../services/settings.service';
-import { CreateOrUpdateSettingsDto } from '../dto/settings.dto';
+import {
+  CreateOrUpdateSettingsDto,
+  SettingsPaginateQueryDto,
+  SettingsCursorPaginateQueryDto,
+} from '../dto/settings.dto';
 import { SettingsType } from '../constants/settings.constants';
 import {
   AuthGuard,
@@ -35,7 +39,7 @@ import { SETTINGS_RATE_LIMITS } from '../constants/settings.cache.constants';
 @UseGuards(AuthGuard, RolesGuard, SlidingWindowRateLimitGuard)
 @UseInterceptors(TransformResponseInterceptor)
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(private readonly settingsService: SettingsService) { }
 
   @Post()
   @ApiOperation({
@@ -49,6 +53,9 @@ export class SettingsController {
     @Query('type', new ParseEnumPipe(SettingsType)) type: SettingsType,
     @Body() dto: CreateOrUpdateSettingsDto,
   ) {
+
+    console.log("hit :: ");
+
     const result = await this.settingsService.createOrUpdateSettings(type, {
       ...dto,
       type,
@@ -93,6 +100,75 @@ export class SettingsController {
       success: true,
       data: result,
       message: 'All settings retrieved successfully',
+    };
+  }
+
+  @Get('paginate')
+  @ApiOperation({
+    summary: 'Get all settings with pagination',
+    description: 'Get all static content with pagination (Admin only)',
+  })
+  @ApiResponse({ status: 200, description: 'Settings retrieved successfully' })
+  @Roles('admin')
+  @RateLimit(SETTINGS_RATE_LIMITS.MANAGE_SETTINGS)
+  async getAllWithPagination(
+    @Query() query: SettingsPaginateQueryDto,
+  ) {
+    const { page, limit, sortBy, ...filters } = query;
+    const options = {
+      page,
+      limit,
+      sortBy: sortBy || 'type',
+    };
+
+    // Define include and select projections here instead of receiving them from the frontend query
+    const include = undefined; // Settings model currently has no relations to include, but kept here for pattern consistency
+    const select = undefined;  // You can define a select projection here if needed, e.g., { id: true, type: true, details: true }
+
+    const result = await this.settingsService.getAllWithPagination(
+      filters,
+      options,
+      include,
+      select,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Settings with pagination retrieved successfully',
+    };
+  }
+
+  @Get('paginate/v2')
+  @ApiOperation({
+    summary: 'Get all settings with cursor pagination (v2)',
+    description: 'Get all static content with cursor-based pagination (Admin only)',
+  })
+  @ApiResponse({ status: 200, description: 'Settings retrieved successfully' })
+  @Roles('admin')
+  @RateLimit(SETTINGS_RATE_LIMITS.MANAGE_SETTINGS)
+  async getAllWithPaginationCursor(
+    @Query() query: SettingsCursorPaginateQueryDto,
+  ) {
+    const { limit, cursor, sortBy, ...filters } = query;
+    const options = {
+      limit,
+      cursor,
+      sortBy: sortBy || 'id',
+    };
+
+    const include = undefined;
+    const select = undefined;
+
+    const result = await this.settingsService.getAllWithPaginationCursor(
+      filters,
+      options,
+      include,
+      select,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Settings with cursor pagination retrieved successfully',
     };
   }
 

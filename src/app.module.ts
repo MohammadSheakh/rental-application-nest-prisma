@@ -7,6 +7,7 @@ import { AuthModule } from './features/authentication/auth.module';
 import { UserModule } from './features/user-management/user.module';
 import { PrismaModule } from '@app/database';
 import { BullMQModule } from '@app/queue';
+import { SettingsModule } from './features/settings/settings.module';
 
 /**
  * Application Root Module
@@ -20,6 +21,7 @@ import { BullMQModule } from '@app/queue';
 
     AuthModule,
     UserModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

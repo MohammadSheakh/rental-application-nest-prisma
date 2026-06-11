@@ -7,6 +7,7 @@ import {
   IsObject,
 } from 'class-validator';
 import { SettingsType } from '../constants/settings.constants';
+import { PaginateQueryDto, CursorPaginateQueryDto } from '@app/common';
 
 /**
  * DTO for creating or updating settings
@@ -55,4 +56,30 @@ export class GetSettingsByTypeDto {
     message: 'Invalid settings type',
   })
   type: SettingsType;
+}
+
+/**
+ * DTO for offset-based settings pagination
+ */
+export class SettingsPaginateQueryDto extends PaginateQueryDto {
+  @ApiPropertyOptional({
+    description: 'Filter settings by type',
+    enum: SettingsType,
+  })
+  @IsOptional()
+  @IsEnum(SettingsType, { message: 'Invalid settings type' })
+  type?: SettingsType;
+}
+
+/**
+ * DTO for cursor-based settings pagination
+ */
+export class SettingsCursorPaginateQueryDto extends CursorPaginateQueryDto {
+  @ApiPropertyOptional({
+    description: 'Filter settings by type',
+    enum: SettingsType,
+  })
+  @IsOptional()
+  @IsEnum(SettingsType, { message: 'Invalid settings type' })
+  type?: SettingsType;
 }

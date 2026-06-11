@@ -22,9 +22,6 @@ export enum SettingsType {
 
   /** Terms and Conditions content */
   termsAndConditions = 'termsAndConditions',
-
-  /** Introduction Video URL/details */
-  introductionVideo = 'introductionVideo',
 }
 
 /**
@@ -35,7 +32,6 @@ export const ALLOWED_SETTINGS_TYPES = [
   SettingsType.contactUs,
   SettingsType.privacyPolicy,
   SettingsType.termsAndConditions,
-  SettingsType.introductionVideo,
 ] as const;
 
 /**
@@ -46,7 +42,6 @@ export const SETTINGS_TYPE_LABELS: Record<SettingsType, string> = {
   [SettingsType.contactUs]: 'Contact Us',
   [SettingsType.privacyPolicy]: 'Privacy Policy',
   [SettingsType.termsAndConditions]: 'Terms and Conditions',
-  [SettingsType.introductionVideo]: 'Introduction Video',
 };
 
 /**
